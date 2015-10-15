@@ -188,26 +188,29 @@ Packet ProcessingElement::trafficRandom()
 
     // Random destination distribution
     do {
-	p.dst_id = randInt(0, max_id);
+      int is_broadcast = randInt(0,5);
+      if (is_broadcast % 6 == 0) {
+        /* send broadcast packet at probability 50% */
+        p.dst_id = -1;
+        break;
+      }
+      p.dst_id = randInt(0, max_id);
 
-	// check for hotspot destination
-	for (size_t i = 0; i < GlobalParams::hotspots.size(); i++) {
-
-	    if (rnd >= range_start
-		&& rnd <
-		range_start + GlobalParams::hotspots[i].second) {
-		if (local_id != GlobalParams::hotspots[i].first) {
-		    p.dst_id = GlobalParams::hotspots[i].first;
-		}
-		break;
-	    } else
-		range_start += GlobalParams::hotspots[i].second;	// try next
-	}
+      // check for hotspot destination
+      for (size_t i = 0; i < GlobalParams::hotspots.size(); i++) {
+        if (rnd >= range_start && rnd < range_start + GlobalParams::hotspots[i].second) {
+          if (local_id != GlobalParams::hotspots[i].first) {
+            p.dst_id = GlobalParams::hotspots[i].first;
+          }
+          break;
+        } else {
+          range_start += GlobalParams::hotspots[i].second;	// try next
+        }
+      }
     } while (p.dst_id == p.src_id);
-
+    
     p.timestamp = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
     p.size = p.flit_left = getRandomSize();
-
     return p;
 }
 // TODO: for testing only

@@ -117,7 +117,7 @@ trace_filename: ""
 
 min_packet_size: 2
 max_packet_size: 2
-packet_injection_rate: 0.01
+packet_injection_rate: 0.1
 probability_of_retransmission: 0.01
 
 # Traffic distribution:

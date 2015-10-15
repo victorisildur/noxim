@@ -1,7 +1,7 @@
 ##### LIBRARIES CONFIGURATION #####
 
-SYSTEMC := libs/systemc-2.3.1
-YAML    := libs/yaml-cpp
+SYSTEMC := /home/isi/workspace/systemc-2.3.1
+YAML    := /home/isi/workspace/yaml-cpp
 
 
 ##### DIRECTORIES #####
@@ -22,7 +22,7 @@ MODULE := noxim
 
 CXX      := g++
 OPT      := -O3
-DEBUG    := # -g -DDEBUG
+DEBUG    := -g -DDEBUG
 OTHER    := -Wall# -Wno-deprecated
 CXXFLAGS := $(OPT) $(OTHER) $(DEBUG)
 

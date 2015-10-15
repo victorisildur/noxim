@@ -12,22 +12,19 @@
 
 ReservationTable::ReservationTable()
 {
-
   rtable.clear();
 }
 
 
 bool ReservationTable::isAvailable(const int port_out)
 {
+  if (rtable.find(port_out)==rtable.end())
+    rtable[port_out] = NOT_RESERVED;
+    
+  if (rtable[port_out]==NOT_VALID) throw NOT_VALID;
 
-    if (rtable.find(port_out)==rtable.end())
-	rtable[port_out] = NOT_RESERVED;
 
-    if (rtable[port_out]==NOT_VALID) throw NOT_VALID;
-
-//    assert(rtable[port_out]!=NOT_VALID);
-
-    return (rtable[port_out]==NOT_RESERVED);
+  return (rtable[port_out]==NOT_RESERVED);
 }
 
 void ReservationTable::reserve(const int port_in, const int port_out)
@@ -51,21 +48,24 @@ void ReservationTable::release(const int port_out)
     rtable[port_out] = NOT_RESERVED;
 }
 
-int ReservationTable::getOutputPort(const int port_in)
+vector<int> ReservationTable::getOutputPort(const int port_in)
 {
+  vector<int> output_ports;
 
-    for (map<int,int>::iterator i=rtable.begin(); i!=rtable.end(); i++)
-    {
-	if (i->second == port_in)
-	    return i->first;		// port_in reserved outport i
+  for (map<int,int>::iterator i=rtable.begin(); i!=rtable.end(); i++) {
+	if (i->second == port_in) {
+      output_ports.push_back(i->first);
     }
-
+  }
+  if (output_ports.empty()) {
     // semantic: port_in currently doesn't reserve any out port
-    return NOT_RESERVED;
+    output_ports.push_back(NOT_RESERVED);
+  }
+  return output_ports;
 }
 
 // makes port_out no longer available for reservation/release
 void ReservationTable::invalidate(const int port_out)
 {
-    rtable[port_out] = NOT_VALID;
+  rtable[port_out] = NOT_VALID;
 }

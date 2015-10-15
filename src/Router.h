@@ -64,6 +64,7 @@ SC_MODULE(Router)
     int routing_type;		                // Type of routing algorithm
     int selection_type;
     Buffer buffer[DIRECTIONS + 2];	        // Buffer for each input channel 
+    Buffer buffer_bk[DIRECTIONS + 2];	    // Buffer for each input channel 
     bool current_level_rx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     Stats stats;		                // Statistics
@@ -122,7 +123,7 @@ SC_MODULE(Router)
   private:
 
     // performs actual routing + selection
-    int route(const RouteData & route_data);
+    vector<int> route(const RouteData & route_data);
 
     // wrappers
     int selectionFunction(const vector <int> &directions,
