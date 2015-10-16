@@ -18,7 +18,7 @@
 using namespace std;
 
 class ReservationTable {
-  public:
+public:
 
     ReservationTable();
 
@@ -31,22 +31,39 @@ class ReservationTable {
     // Connects port_in with port_out. Asserts if port_out is reserved
     void reserve(const int port_in, const int port_out);
 
+    // Record port_out has been transmitted
+    void transmitted(const int port_out);
+
+    // Clear port_in's transmittion info
+    void clear_outputs_transmitted(const vector<int> output_ports);
+
+    // Check if (port_out) has been all transmitted
+    bool has_transmitted(const int port_out);
+
+    // Check if all output_ports have been transmitted
+    bool has_all_transmitted(const vector<int> output_ports);
+
+
     // Releases port_out connection. 
     // Asserts if port_out is not reserved or not valid
     void release(const int port_out);
 
-    // Returns the output ports connected to port_in.
-    vector<int> getOutputPort(const int port_in);
+    // Check if all output_ports are released
+    bool has_all_released(const vector<int> output_ports);
+
+    // Returns the output_port list connected to port_in.
+    vector<int> getOutputPorts(const int port_in);
 
     // Makes output port no longer available for reservation/release
     void invalidate(const int port_out);
 
 
-  private:
-
-
-     map<int,int> rtable;	// reservation vector: rtable[i] gives the input
-    // port whose output port 'i' is connected to
+private:
+    /* Reservation Table: 
+       key: output_port
+       value: (input_port, has_transmitted)
+     */
+    map< int, pair<int,bool> > rtable;
 };
 
 #endif

@@ -4,7 +4,7 @@
 # TODO: REPLACE WITH 32
 mesh_dim_x: 16
 mesh_dim_y: 16
-buffer_depth: 4
+buffer_depth: 8
 flit_size: 64
 r2h_link_length: 2.0
 r2r_link_length: 1.0
@@ -94,7 +94,7 @@ Channels:
 #
 clock_period_ps: 1000
 reset_time: 1000
-simulation_time: 10000
+simulation_time: 2000
 stats_warm_up_time: 1000
 detailed: false
 max_volume_to_be_drained: 0
@@ -117,8 +117,8 @@ trace_filename: ""
 
 min_packet_size: 2
 max_packet_size: 2
-packet_injection_rate: 0.1
-probability_of_retransmission: 0.01
+packet_injection_rate: 0.05
+probability_of_retransmission: 1
 
 # Traffic distribution:
 #   TRAFFIC_RANDOM
