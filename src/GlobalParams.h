@@ -58,12 +58,15 @@ using namespace std;
 #define TRAFFIC_BUTTERFLY      "TRAFFIC_BUTTERFLY"
 #define TRAFFIC_LOCAL	       "TRAFFIC_LOCAL"
 
-// Verbosity levels
-#define VERBOSE_OFF            "VERBOSE_OFF"
-#define VERBOSE_LOW            "VERBOSE_LOW"
-#define VERBOSE_MEDIUM         "VERBOSE_MEDIUM"
-#define VERBOSE_HIGH           "VERBOSE_HIGH"
+// Broadcast routines
+#define BROADCAST_TREE         0
+#define BROADCAST_PATH         1
 
+// Verbosity levels
+#define VERBOSE_OFF            0
+#define VERBOSE_LOW            1
+#define VERBOSE_MEDIUM         2
+#define VERBOSE_HIGH           3
 
 // Wireless MAC constants
 #define RELEASE_CHANNEL 1
@@ -122,7 +125,7 @@ typedef struct {
 } PowerConfig;
 
 struct GlobalParams {
-    static string verbose_mode;
+    static int verbose_mode;
     static int trace_mode;
     static string trace_filename;
     static int mesh_dim_x;
@@ -150,6 +153,8 @@ struct GlobalParams {
     static bool detailed;
     static vector <pair <int, double> > hotspots;
     static double dyad_threshold;
+    static double broadcast_probability;
+    static double inject_congestion_threshold;
     static unsigned int max_volume_to_be_drained;
     static bool show_buffer_stats;
     static bool use_winoc;

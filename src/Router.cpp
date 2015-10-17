@@ -33,26 +33,44 @@ void Router::rxProcess()
             // 2) there is a free slot in the input buffer of direction i
 
             if ((req_rx[i].read() == 1 - current_level_rx[i])
-                && !buffer[i].IsFull()) {
+                && !buffer[i].IsFull()) 
+            {
                 Flit received_flit = flit_rx[i].read();
 
+                // if a new flit is injected from local PE
+                if (received_flit.src_id == local_id) {
+                    power.networkInterface();
+                    // set broadcast routine for broadcast flits
+                    if (received_flit.dst_id == -1)
+                    {
+                        if (received_flit.flit_type == FLIT_TYPE_HEAD) 
+                        {
+                            // when flit_head, check router congestion
+                            received_flit.broadcast_routine = BROADCAST_TREE;
+                            if (isInjectCongested()) {
+                                received_flit.broadcast_routine = BROADCAST_PATH;
+                                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                                    LOG << "a congested broadcast, flit:" << received_flit << endl;
+                            } else {
+                                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                                    LOG << "an idle broadcast, flit:" << received_flit << endl;
+                            }
+                            broadcast_routine = received_flit.broadcast_routine;
+                        }
+                        else
+                        {
+                            // all following flit should have same header with head_flit
+                            received_flit.broadcast_routine = broadcast_routine;
+                        }
+                    }
+                }
+
                 // Store the incoming flit in the circular buffer
-                /* copy multiple flit in the input buffer i if the flit is a broadcast one */
-                //if (received_flit.flit_type == FLIT_TYPE_HEAD) {
-                // only from head flit we could know how many copies it needs
-                // but we need to copy every flits of it.
-                // how to solve?
-                //vector<int> out_ports = route(route_data);
                 buffer[i].Push(received_flit);
                 power.bufferRouterPush();
-                //}
+
                 // Negate the old value for Alternating Bit Protocol (ABP)
                 current_level_rx[i] = 1 - current_level_rx[i];
-
-
-                // if a new flit is injected from local PE
-                if (received_flit.src_id == local_id)
-                    power.networkInterface();
             }
             ack_rx[i].write(current_level_rx[i]);
         }
@@ -88,23 +106,27 @@ void Router::txProcess()
                 route_data.src_id = flit.src_id;
                 route_data.dst_id = flit.dst_id;
                 route_data.dir_in = i;
+                route_data.broadcast_routine = flit.broadcast_routine;
 
                 // routing
                 vector<int> out_ports = route(route_data);
-                LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
+                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                    LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
 
                 // put i -> out_ports into the reservation table
                 for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
                     int o = *it;
-                    LOG << " checking reservation availability of direction " << o 
-                        << " for flit " << flit << endl;
-
+                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                        LOG << " checking reservation availability of direction " << o 
+                            << " for flit " << flit << endl;
                     if (reservation_table.isAvailable(o)) {
-                        LOG << " reserving direction " << o << " for flit " << flit << endl;
+                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                            LOG << " reserving direction " << o << " for flit " << flit << endl;
                         reservation_table.reserve(i, o);
                     } 
                     else {
-                        LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
+                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                            LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
                     }
                 }
             }
@@ -133,7 +155,8 @@ void Router::txProcess()
 
                 if (current_level_tx[o] == ack_tx[o].read()) 
                 {
-                    LOG << "Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
+                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
+                        LOG << "Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
 
                     flit_tx[o].write(flit);
                     if (o == DIRECTION_HUB) {
@@ -155,12 +178,14 @@ void Router::txProcess()
                         power.networkInterface();
 
                     if (flit.flit_type == FLIT_TYPE_TAIL) { /* always release? */
-                        LOG << "release reservation table for filt " << flit << endl;
+                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
+                            LOG << "release reservation table for filt " << flit << endl;
                         reservation_table.release(o);
                     }
                     // Update stats
                     if (o == DIRECTION_LOCAL) {
-                        LOG << "Consumed flit " << flit << endl;
+                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
+                            LOG << "Consumed flit " << flit << endl;
                         stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
                         if (GlobalParams::max_volume_to_be_drained) {
                             if (drained_volume >= GlobalParams:: max_volume_to_be_drained)
@@ -177,17 +202,20 @@ void Router::txProcess()
                     }
                 }
                 else { /* current_level_tx[o] != ack_tx[o].read() */
-                    LOG << " cannot forward Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
+                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
+                        LOG << " cannot forward Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
+
                     // last flit hasn't transmitted, in this case, don't pop buffer!
                     if (flit.flit_type == FLIT_TYPE_HEAD)
-                        reservation_table.release(o); // omg, this will be taken as transmitted!
+                        reservation_table.release(o); 
                 }
             } // end for. all output_ports have written the flit
             
             // pop buffer, only if all outputs for (i->outputs) has been transmitted
             if (reservation_table.has_all_transmitted(output_ports)) 
             {
-                LOG << "has all transmitted, flit:" << flit << endl;
+                if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
+                    LOG << "has all transmitted, flit:" << flit << endl;
                 buffer[i].Pop();
                 power.bufferRouterPop();
                 // i all not transmitted for next flit
@@ -195,10 +223,13 @@ void Router::txProcess()
             }
             else
             {
-                LOG << "some has not been transmitted, flit:" << flit
-                    << ", output ports: " << endl;
-                for (vector<int>::iterator it = output_ports.begin(); it != output_ports.end(); ++it) {
-                    LOG << "    " << *it << " " << endl;
+
+                if (GlobalParams::verbose_mode >= VERBOSE_HIGH) {
+                    LOG << "some has not been transmitted, flit:" << flit
+                        << ", output ports: " << endl;
+                    for (vector<int>::iterator it = output_ports.begin(); it != output_ports.end(); ++it) {
+                        LOG << "    " << *it << " " << endl;
+                    }
                 }
             }
         }
@@ -261,7 +292,8 @@ vector < int > Router::routingFunction(const RouteData & route_data)
             return dirv;
         }
     }
-    LOG << "Wired routing for dst = " << route_data.dst_id << endl;
+    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+        LOG << "Wired routing for dst = " << route_data.dst_id << endl;
 
     return routingAlgorithm->route(this, route_data);
 }
@@ -442,6 +474,19 @@ bool Router::inCongestion()
 
     return false;
 }
+
+bool Router::isInjectCongested()
+{
+    int free_buf = buffer[DIRECTION_LOCAL].getCurrentFreeSlots();
+    int total_buf = buffer[DIRECTION_LOCAL].GetMaxBufferSize();
+    
+    float free_rate = free_buf / total_buf;
+    if (free_rate < 1 - GlobalParams::inject_congestion_threshold) 
+        return true;
+    else 
+        return false;
+}
+
 
 void Router::ShowBuffersStats(std::ostream & out)
 {

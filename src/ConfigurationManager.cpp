@@ -19,7 +19,7 @@ void loadConfiguration() {
 
 
     // Initialize global configuration parameters (can be overridden with command-line arguments)
-    GlobalParams::verbose_mode = config["verbose_mode"].as<string>();
+    GlobalParams::verbose_mode = config["verbose_mode"].as<int>();
     GlobalParams::trace_mode = config["trace_mode"].as<bool>();
     GlobalParams::trace_filename = config["trace_filename"].as<string>();
     GlobalParams::mesh_dim_x = config["mesh_dim_x"].as<int>();
@@ -44,6 +44,8 @@ void loadConfiguration() {
     GlobalParams::rnd_generator_seed = time(NULL);
     GlobalParams::detailed = config["detailed"].as<bool>();
     GlobalParams::dyad_threshold = config["dyad_threshold"].as<double>();
+    GlobalParams::broadcast_probability = config["broadcast_probability"].as<double>();
+    GlobalParams::inject_congestion_threshold = config["inject_congestion_threshold"].as<double>();
     GlobalParams::max_volume_to_be_drained = config["max_volume_to_be_drained"].as<unsigned int>();
     //GlobalParams::hotspots;
     GlobalParams::show_buffer_stats = config["show_buffer_stats"].as<bool>();

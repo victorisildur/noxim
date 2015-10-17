@@ -11,6 +11,8 @@
 
 #define LOG (std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " " << name() << "::" << __func__<< "() --> ")
 
+#define LOG_EZ (std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " :" << __func__<< "() --> ")
+
 #else
 template <class cT, class traits = std::char_traits<cT> >
 class basic_nullbuf: public std::basic_streambuf<cT, traits> {

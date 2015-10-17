@@ -10,7 +10,9 @@ r2h_link_length: 2.0
 r2r_link_length: 1.0
 
 # Routing algorithms:
-#   XY
+#   XY(tree)
+#   PATH
+#   LOADAWARE
 #   WEST_FIRST
 #   NORTH_LAST
 #   NEGATIVE_FIRST
@@ -23,6 +25,13 @@ routing_table_filename: ""
 # Routing specific parameters
 #   dyad_threshold: double
 dyad_threshold: 0.6
+
+# broadcast probability: double
+broadcast_probability: 0.1
+
+# inject buffer congestion threshold: double
+inject_congestion_threshold: 0.7
+
 
 # Selection Strategies:
 #   RANDOM
@@ -94,7 +103,7 @@ Channels:
 #
 clock_period_ps: 1000
 reset_time: 1000
-simulation_time: 2000
+simulation_time: 10000
 stats_warm_up_time: 1000
 detailed: false
 max_volume_to_be_drained: 0
@@ -105,11 +114,11 @@ use_winoc: false
 use_wirxsleep: false
 
 # Verbosity level:
-#   VERBOSE_OFF
-#   VERBOSE_LOW
-#   VERBOSE_MEDIUM
-#   VERBOSE_HIGH
-verbose_mode: VERBOSE_OFF
+#   VERBOSE_OFF     -> 0
+#   VERBOSE_LOW     -> 1
+#   VERBOSE_MEDIUM  -> 2
+#   VERBOSE_HIGH    -> 3
+verbose_mode: 1
 
 # Trace
 trace_mode: false
@@ -117,8 +126,8 @@ trace_filename: ""
 
 min_packet_size: 2
 max_packet_size: 2
-packet_injection_rate: 0.05
-probability_of_retransmission: 1
+packet_injection_rate: 0.03
+probability_of_retransmission: 0.03
 
 # Traffic distribution:
 #   TRAFFIC_RANDOM
@@ -176,6 +185,8 @@ Energy:
         #   Algorithm:   [Static, Dynamic]
             default:     [1.20e-4, 6.00e-14]
             XY:          [1.20e-4, 6.00e-14]
+            PATH:        [1.20e-4, 6.00e-14]
+            LOADAWARE:   [1.20e-4, 6.00e-14]
             DYAD:        [1.25e-4, 6.23e-14]
 
         selection:

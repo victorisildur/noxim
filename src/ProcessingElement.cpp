@@ -118,9 +118,7 @@ bool ProcessingElement::canShot(Packet & packet)
                 packet = trafficLocal();
             else
                 assert(false);
-        } else {
-            //std::cout << "is transmittedAtPreviousCycle:" << transmittedAtPreviousCycle << ", shot random probability:" << prob_rand << endl;
-        }
+        } 
     } else {                        // Table based communication traffic
         if (never_transmit)
             return false;
@@ -193,10 +191,9 @@ Packet ProcessingElement::trafficRandom()
 
     // Random destination distribution
     do {
-        int is_broadcast = randInt(0,9);
-      
-        if (is_broadcast % 10 == 0) {
-            /* send broadcast packet at probability 10% */
+        double broadcast_rnd = rand() / (double) RAND_MAX;
+        if (broadcast_rnd < GlobalParams::broadcast_probability) {
+            /* send broadcast packet */
             p.dst_id = -1;
             break;
         }

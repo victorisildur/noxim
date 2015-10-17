@@ -16,13 +16,13 @@
 
 // Coord -- XY coordinates type of the Tile inside the Mesh
 class Coord {
-  public:
+public:
     int x;			// X coordinate
     int y;			// Y coordinate
 
     inline bool operator ==(const Coord & coord) const {
-	return (coord.x == x && coord.y == y);
-}};
+        return (coord.x == x && coord.y == y);
+    }};
 
 // FlitType -- Flit type enumeration
 enum FlitType {
@@ -34,8 +34,8 @@ struct Payload {
     sc_uint<32> data;	// Bus for the data to be exchanged
 
     inline bool operator ==(const Payload & payload) const {
-	return (payload.data == data);
-}};
+        return (payload.data == data);
+    }};
 
 // Packet -- Packet definition
 struct Packet {
@@ -50,16 +50,16 @@ struct Packet {
     Packet() { }
 
     Packet(const int s, const int d, const double ts, const int sz) {
-	make(s, d, ts, sz);
+        make(s, d, ts, sz);
     }
 
     void make(const int s, const int d, const double ts, const int sz) {
-	src_id = s;
-	dst_id = d;
-	timestamp = ts;
-	size = sz;
-	flit_left = sz;
-	use_low_voltage_path = false;
+        src_id = s;
+        dst_id = d;
+        timestamp = ts;
+        size = sz;
+        flit_left = sz;
+        use_low_voltage_path = false;
     }
 };
 
@@ -69,13 +69,14 @@ struct RouteData {
     int src_id;
     int dst_id;
     int dir_in;			// direction from which the packet comes from
+    int broadcast_routine;
 };
 
 struct ChannelStatus {
     int free_slots;		// occupied buffer slots
     bool available;		// 
     inline bool operator ==(const ChannelStatus & bs) const {
-	return (free_slots == bs.free_slots && available == bs.available);
+        return (free_slots == bs.free_slots && available == bs.available);
     };
 };
 
@@ -85,15 +86,15 @@ struct NoP_data {
     ChannelStatus channel_status_neighbor[DIRECTIONS];
 
     inline bool operator ==(const NoP_data & nop_data) const {
-	return (sender_id == nop_data.sender_id &&
-		nop_data.channel_status_neighbor[0] ==
-		channel_status_neighbor[0]
-		&& nop_data.channel_status_neighbor[1] ==
-		channel_status_neighbor[1]
-		&& nop_data.channel_status_neighbor[2] ==
-		channel_status_neighbor[2]
-		&& nop_data.channel_status_neighbor[3] ==
-		channel_status_neighbor[3]);
+        return (sender_id == nop_data.sender_id &&
+                nop_data.channel_status_neighbor[0] ==
+                channel_status_neighbor[0]
+                && nop_data.channel_status_neighbor[1] ==
+                channel_status_neighbor[1]
+                && nop_data.channel_status_neighbor[2] ==
+                channel_status_neighbor[2]
+                && nop_data.channel_status_neighbor[3] ==
+                channel_status_neighbor[3]);
     };
 };
 
@@ -108,16 +109,19 @@ struct Flit {
     double timestamp;		// Unix timestamp at packet generation
     int hop_no;			// Current number of hops from source to destination
     bool use_low_voltage_path;
+    int broadcast_routine;
 
     inline bool operator ==(const Flit & flit) const {
-	return (flit.src_id == src_id && flit.dst_id == dst_id
-		&& flit.flit_type == flit_type
-		&& flit.sequence_no == sequence_no
-		&& flit.sequence_length == sequence_length
-		&& flit.payload == payload && flit.timestamp == timestamp
-		&& flit.hop_no == hop_no
-		&& flit.use_low_voltage_path == use_low_voltage_path);
-}};
+        return (flit.src_id == src_id && flit.dst_id == dst_id
+                && flit.flit_type == flit_type
+                && flit.sequence_no == sequence_no
+                && flit.sequence_length == sequence_length
+                && flit.payload == payload && flit.timestamp == timestamp
+                && flit.hop_no == hop_no
+                && flit.use_low_voltage_path == use_low_voltage_path
+                && flit.broadcast_routine == broadcast_routine
+            );
+    }};
 
 
 typedef struct 

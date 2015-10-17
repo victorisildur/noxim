@@ -10,7 +10,7 @@
 
 #include "GlobalParams.h"
 
-string GlobalParams::verbose_mode;
+int GlobalParams::verbose_mode;
 int GlobalParams::trace_mode;
 string GlobalParams::trace_filename;
 int GlobalParams::mesh_dim_x;
@@ -37,6 +37,8 @@ int GlobalParams::stats_warm_up_time;
 int GlobalParams::rnd_generator_seed;
 bool GlobalParams::detailed;
 double GlobalParams::dyad_threshold;
+double GlobalParams::broadcast_probability;
+double GlobalParams::inject_congestion_threshold;
 unsigned int GlobalParams::max_volume_to_be_drained;
 vector <pair <int, double> > GlobalParams::hotspots;
 bool GlobalParams::show_buffer_stats;
