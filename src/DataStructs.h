@@ -45,6 +45,7 @@ struct Packet {
     int size;
     int flit_left;		// Number of remaining flits inside the packet
     bool use_low_voltage_path;
+    bool path_dir;
 
     // Constructors
     Packet() { }
@@ -70,6 +71,7 @@ struct RouteData {
     int dst_id;
     int dir_in;			// direction from which the packet comes from
     int broadcast_routine;
+    bool path_dir;
 };
 
 struct ChannelStatus {
@@ -110,6 +112,7 @@ struct Flit {
     int hop_no;			// Current number of hops from source to destination
     bool use_low_voltage_path;
     int broadcast_routine;
+    bool path_dir;
 
     inline bool operator ==(const Flit & flit) const {
         return (flit.src_id == src_id && flit.dst_id == dst_id

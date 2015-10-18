@@ -12,6 +12,7 @@ r2r_link_length: 1.0
 # Routing algorithms:
 #   XY(tree)
 #   PATH
+#   RPATH
 #   LOADAWARE
 #   WEST_FIRST
 #   NORTH_LAST
@@ -19,7 +20,7 @@ r2r_link_length: 1.0
 #   ODD_EVEN
 #   DYAD
 #   TABLE_BASED
-routing_algorithm: PATH
+routing_algorithm: RPATH
 routing_table_filename: ""
 
 # Routing specific parameters
@@ -27,7 +28,7 @@ routing_table_filename: ""
 dyad_threshold: 0.6
 
 # broadcast probability: double
-broadcast_probability: 0.05
+broadcast_probability: 0.1
 
 # inject buffer congestion threshold: double. 
 # inject_buffer utility greater than that will be taken as congested
@@ -104,7 +105,7 @@ Channels:
 #
 clock_period_ps: 1000
 reset_time: 1000
-simulation_time: 20000
+simulation_time: 60000
 stats_warm_up_time: 1000
 detailed: false
 max_volume_to_be_drained: 0
@@ -126,9 +127,9 @@ trace_mode: false
 trace_filename: ""
 
 min_packet_size: 2
-max_packet_size: 2
-packet_injection_rate: 0.01
-probability_of_retransmission: 0.01
+max_packet_size: 4
+packet_injection_rate: 0.15
+probability_of_retransmission: 0.15
 
 # Traffic distribution:
 #   TRAFFIC_RANDOM
@@ -187,6 +188,7 @@ Energy:
             default:     [1.20e-4, 6.00e-14]
             XY:          [1.20e-4, 6.00e-14]
             PATH:        [1.20e-4, 6.00e-14]
+            RPATH:        [1.20e-4, 6.00e-14]
             LOADAWARE:   [1.20e-4, 6.00e-14]
             DYAD:        [1.25e-4, 6.23e-14]
 

@@ -234,6 +234,7 @@ void Router::reserveOutputsForInput(int i)
     route_data.dst_id = flit.dst_id;
     route_data.dir_in = i;
     route_data.broadcast_routine = flit.broadcast_routine;
+    route_data.path_dir = flit.path_dir;
 
     // routing
     vector<int> out_ports = route(route_data);
@@ -248,6 +249,7 @@ void Router::reserveOutputsForInput(int i)
             if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
                 LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
             all_available = false;
+            break;
         } 
     }
     if (all_available) {
@@ -257,7 +259,8 @@ void Router::reserveOutputsForInput(int i)
             reservation_table.reserve(i,o);
         }
         if (out_ports.size() > 1)
-            LOG << " all available for flit: " << flit << endl;
+            if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                LOG << " all available for flit: " << flit << endl;
 
         _waiting_list[i] = NOT_WAITING;
 
@@ -266,7 +269,8 @@ void Router::reserveOutputsForInput(int i)
             // Don't release any output here! May be taken by unicast! One only release himself!
             // Key move! for multi_outports, give it high priority
             _waiting_list[i] = WAITING;  
-            LOG << " not all good for flit: " << flit << endl;
+            if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                LOG << " not all good for flit: " << flit << endl;
         } else {
             _waiting_list[i] = NOT_WAITING;
         }

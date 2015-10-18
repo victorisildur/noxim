@@ -70,6 +70,8 @@ Flit ProcessingElement::nextFlit()
     flit.sequence_no = packet.size - packet.flit_left;
     flit.sequence_length = packet.size;
     flit.hop_no = 0;
+    //  flit.broadcast_routine =  // decide by Inject Router
+    flit.path_dir = packet.path_dir;
     //  flit.payload     = DEFAULT_PAYLOAD;
 
     if (packet.size == packet.flit_left)
@@ -195,6 +197,11 @@ Packet ProcessingElement::trafficRandom()
         if (broadcast_rnd < GlobalParams::broadcast_probability) {
             /* send broadcast packet */
             p.dst_id = -1;
+            double path_rnd = rand() / (double) RAND_MAX;
+            if (path_rnd < 0.5)
+                p.path_dir = PATH_HORIZONTAL;
+            else
+                p.path_dir = PATH_VERTICAL;
             break;
         }
 

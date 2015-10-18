@@ -67,6 +67,10 @@ using namespace std;
 #define BROADCAST_TREE         0
 #define BROADCAST_PATH         1
 
+// Path-based Broadcast, Path Directions
+#define PATH_HORIZONTAL        false
+#define PATH_VERTICAL          true
+
 // Verbosity levels
 #define VERBOSE_OFF            0
 #define VERBOSE_LOW            1
