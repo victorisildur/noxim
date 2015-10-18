@@ -55,12 +55,12 @@ void Router::rxProcess()
                                 if (GlobalParams::verbose_mode >= VERBOSE_LOW)
                                     LOG << "an idle broadcast, flit:" << received_flit << endl;
                             }
-                            broadcast_routine = received_flit.broadcast_routine;
+                            _broadcast_routine = received_flit.broadcast_routine;
                         }
                         else
                         {
                             // all following flit should have same header with head_flit
-                            received_flit.broadcast_routine = broadcast_routine;
+                            received_flit.broadcast_routine = _broadcast_routine;
                         }
                     }
                 }
@@ -87,49 +87,27 @@ void Router::txProcess()
         {
             req_tx[i].write(0);
             current_level_tx[i] = 0;
+            _waiting_list[i] = NOT_WAITING;
         }
     } 
     else {
         // 1st phase: Reservation
+        vector<int> waiting_inputs;
+        vector<int> not_waiting_inputs;
         for (int j = 0; j < DIRECTIONS + 2; j++) {
             int i = (start_from_port + j) % (DIRECTIONS + 2);
-            if (buffer[i].IsEmpty()) {
-                continue;
-            }
-            Flit flit = buffer[i].Front();
-            power.bufferRouterFront();
-
-            if (flit.flit_type == FLIT_TYPE_HEAD) {
-                // prepare data for routing
-                RouteData route_data;
-                route_data.current_id = local_id;
-                route_data.src_id = flit.src_id;
-                route_data.dst_id = flit.dst_id;
-                route_data.dir_in = i;
-                route_data.broadcast_routine = flit.broadcast_routine;
-
-                // routing
-                vector<int> out_ports = route(route_data);
-                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                    LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
-
-                // put i -> out_ports into the reservation table
-                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                    int o = *it;
-                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                        LOG << " checking reservation availability of direction " << o 
-                            << " for flit " << flit << endl;
-                    if (reservation_table.isAvailable(o)) {
-                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                            LOG << " reserving direction " << o << " for flit " << flit << endl;
-                        reservation_table.reserve(i, o);
-                    } 
-                    else {
-                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                            LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
-                    }
-                }
-            }
+            if (_waiting_list[i] == WAITING)
+                waiting_inputs.push_back(i);
+            else
+                not_waiting_inputs.push_back(i);
+        }
+        for (vector<int>::iterator it = waiting_inputs.begin(); it != waiting_inputs.end(); ++it)
+        {
+            reserveOutputsForInput(*it);
+        }
+        for (vector<int>::iterator it = not_waiting_inputs.begin(); it != not_waiting_inputs.end(); ++it)
+        {
+            reserveOutputsForInput(*it);
         }
         start_from_port++;
 
@@ -236,6 +214,69 @@ void Router::txProcess()
     }
 }
 
+void Router::reserveOutputsForInput(int i)
+{
+    assert(i>=0 && i<DIRECTIONS+2);
+    if (buffer[i].IsEmpty()) {
+        return;
+    }
+    Flit flit = buffer[i].Front();
+    power.bufferRouterFront();
+
+    // only flit head needs reserving
+    if (flit.flit_type == FLIT_TYPE_HEAD) {
+        // prepare data for routing
+        RouteData route_data;
+        route_data.current_id = local_id;
+        route_data.src_id = flit.src_id;
+        route_data.dst_id = flit.dst_id;
+        route_data.dir_in = i;
+        route_data.broadcast_routine = flit.broadcast_routine;
+
+        // routing
+        vector<int> out_ports = route(route_data);
+        if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+            LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
+
+        // put i -> out_ports into the reservation table, must reserve all at once!
+        bool all_available = true;
+        for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+            int o = *it;
+            if (!reservation_table.isAvailable(o)) {
+                if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                    LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
+                all_available = false;
+            } 
+        }
+        if (all_available) {
+            for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+                int o = *it;
+                assert (reservation_table.isAvailable(o));
+                reservation_table.reserve(i,o);
+            }
+            if (out_ports.size() > 1)
+                LOG << " all available for flit: " << flit << endl;
+
+            _waiting_list[i] = NOT_WAITING;
+
+        } else {
+            if (out_ports.size() > 1) {
+                // release multi_ports
+                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+                    int o = *it;
+                    if (!reservation_table.isAvailable(o))
+                        reservation_table.release(o);
+                }
+                // key move! for multi_outports, give it high priority
+                _waiting_list[i] = WAITING;  
+                LOG << " not all good for flit: " << flit << endl;
+            } else {
+                _waiting_list[i] = NOT_WAITING;
+            }
+        }
+    }
+}
+
 NoP_data Router::getCurrentNoPData()
 {
     NoP_data NoP_data;
@@ -292,7 +333,7 @@ vector < int > Router::routingFunction(const RouteData & route_data)
             return dirv;
         }
     }
-    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
         LOG << "Wired routing for dst = " << route_data.dst_id << endl;
 
     return routingAlgorithm->route(this, route_data);

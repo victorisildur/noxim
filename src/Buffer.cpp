@@ -13,16 +13,16 @@
 
 Buffer::Buffer()
 {
-  SetMaxBufferSize(GlobalParams::buffer_depth);
-  max_occupancy = 0;
-  hold_time = 0.0;
-  last_event = 0.0;
-  hold_time_sum = 0.0;
-  previous_occupancy = 0;
-  mean_occupancy = 0.0;
-  true_buffer = true;
-  full_cycles_counter = 0;
-  last_front_flit_seq = NOT_VALID;
+    SetMaxBufferSize(GlobalParams::buffer_depth);
+    max_occupancy = 0;
+    hold_time = 0.0;
+    last_event = 0.0;
+    hold_time_sum = 0.0;
+    previous_occupancy = 0;
+    mean_occupancy = 0.0;
+    true_buffer = true;
+    full_cycles_counter = 0;
+    last_front_flit_seq = NOT_VALID;
 }
 
 void Buffer::Print(const char *prefix)
@@ -36,9 +36,9 @@ void Buffer::Print(const char *prefix)
     LOG << prefix << " | ";
     while (!(m.empty()))
     {
-	Flit f = m.front();
-	m.pop();
-	cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
+        Flit f = m.front();
+        m.pop();
+        cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
     }
     cout << endl;
 }
@@ -54,16 +54,16 @@ bool Buffer::deadlockFree()
 
     if (last_front_flit_seq==seq)
     {
-	full_cycles_counter++;
+        full_cycles_counter++;
     }
     else
     {
-	last_front_flit_seq = seq;
-	full_cycles_counter=0;
+        last_front_flit_seq = seq;
+        full_cycles_counter=0;
     }
 
     if (full_cycles_counter>10000) 
-	return false;
+        return false;
 
     return true;
 
@@ -71,119 +71,119 @@ bool Buffer::deadlockFree()
 
 void Buffer::Disable()
 {
-  true_buffer = false;
+    true_buffer = false;
 }
 
 void Buffer::SetMaxBufferSize(const unsigned int bms)
 {
-  assert(bms > 0);
+    assert(bms > 0);
 
-  max_buffer_size = bms;
+    max_buffer_size = bms;
 }
 
 unsigned int Buffer::GetMaxBufferSize() const
 {
-  return max_buffer_size;
+    return max_buffer_size;
 }
 
 bool Buffer::IsFull() const
 {
-  return buffer.size() == max_buffer_size;
+    return buffer.size() == max_buffer_size;
 }
 
 bool Buffer::IsEmpty() const
 {
-  return buffer.size() == 0;
+    return buffer.size() == 0;
 }
 
 void Buffer::Drop(const Flit & flit) const
 {
-  assert(false);
+    assert(false);
 }
 
 void Buffer::Empty() const
 {
-  assert(false);
+    assert(false);
 }
 
 void Buffer::Push(const Flit & flit)
 {
-  SaveOccupancyAndTime();
+    SaveOccupancyAndTime();
 
-  if (IsFull())
-    Drop(flit);
-  else
-    buffer.push(flit);
+    if (IsFull())
+        Drop(flit);
+    else
+        buffer.push(flit);
   
-  UpdateMeanOccupancy();
+    UpdateMeanOccupancy();
 
-  if (max_occupancy < buffer.size())
-    max_occupancy = buffer.size();
+    if (max_occupancy < buffer.size())
+        max_occupancy = buffer.size();
 }
 
 Flit Buffer::Pop()
 {
-  Flit f;
+    Flit f;
 
-  SaveOccupancyAndTime();
+    SaveOccupancyAndTime();
 
-  if (IsEmpty())
-    Empty();
-  else {
-    f = buffer.front();
-    buffer.pop();
-  }
+    if (IsEmpty())
+        Empty();
+    else {
+        f = buffer.front();
+        buffer.pop();
+    }
 
-  UpdateMeanOccupancy();
+    UpdateMeanOccupancy();
 
-  return f;
+    return f;
 }
 
 Flit Buffer::Front() const
 {
-  Flit f;
+    Flit f;
 
-  if (IsEmpty())
-    Empty();
-  else
-    f = buffer.front();
+    if (IsEmpty())
+        Empty();
+    else
+        f = buffer.front();
 
-  return f;
+    return f;
 }
 
 unsigned int Buffer::Size() const
 {
-  return buffer.size();
+    return buffer.size();
 }
 
 unsigned int Buffer::getCurrentFreeSlots() const
 {
-  return (GetMaxBufferSize() - Size());
+    return (GetMaxBufferSize() - Size());
 }
 
 void Buffer::SaveOccupancyAndTime()
 {
-  previous_occupancy = buffer.size();
-  hold_time = (sc_time_stamp().to_double() / GlobalParams::clock_period_ps) - last_event;
-  last_event = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+    previous_occupancy = buffer.size();
+    hold_time = (sc_time_stamp().to_double() / GlobalParams::clock_period_ps) - last_event;
+    last_event = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
 }
 
 void Buffer::UpdateMeanOccupancy()
 {
-  double current_time = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
-  if (current_time - GlobalParams::reset_time < GlobalParams::stats_warm_up_time)
-    return;
+    double current_time = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+    if (current_time - GlobalParams::reset_time < GlobalParams::stats_warm_up_time)
+        return;
 
-  mean_occupancy = mean_occupancy * (hold_time_sum/(hold_time_sum+hold_time)) +
-    (1.0/(hold_time_sum+hold_time)) * hold_time * buffer.size();
+    mean_occupancy = mean_occupancy * (hold_time_sum/(hold_time_sum+hold_time)) +
+        (1.0/(hold_time_sum+hold_time)) * hold_time * buffer.size();
 
-  hold_time_sum += hold_time;
+    hold_time_sum += hold_time;
 }
 
 void Buffer::ShowStats(std::ostream & out)
 {
-  if (true_buffer)
-    out << "\t" << mean_occupancy << "\t" << max_occupancy;
-  else
-    out << "\t\t";
+    if (true_buffer)
+        out << "\t" << mean_occupancy << "\t" << max_occupancy;
+    else
+        out << "\t\t";
 }

@@ -19,7 +19,7 @@ r2r_link_length: 1.0
 #   ODD_EVEN
 #   DYAD
 #   TABLE_BASED
-routing_algorithm: XY
+routing_algorithm: PATH
 routing_table_filename: ""
 
 # Routing specific parameters
@@ -27,9 +27,10 @@ routing_table_filename: ""
 dyad_threshold: 0.6
 
 # broadcast probability: double
-broadcast_probability: 0.1
+broadcast_probability: 0.05
 
-# inject buffer congestion threshold: double
+# inject buffer congestion threshold: double. 
+# inject_buffer utility greater than that will be taken as congested
 inject_congestion_threshold: 0.7
 
 
@@ -103,7 +104,7 @@ Channels:
 #
 clock_period_ps: 1000
 reset_time: 1000
-simulation_time: 10000
+simulation_time: 20000
 stats_warm_up_time: 1000
 detailed: false
 max_volume_to_be_drained: 0
@@ -118,7 +119,7 @@ use_wirxsleep: false
 #   VERBOSE_LOW     -> 1
 #   VERBOSE_MEDIUM  -> 2
 #   VERBOSE_HIGH    -> 3
-verbose_mode: 1
+verbose_mode: 0
 
 # Trace
 trace_mode: false
@@ -126,8 +127,8 @@ trace_filename: ""
 
 min_packet_size: 2
 max_packet_size: 2
-packet_injection_rate: 0.03
-probability_of_retransmission: 0.03
+packet_injection_rate: 0.01
+probability_of_retransmission: 0.01
 
 # Traffic distribution:
 #   TRAFFIC_RANDOM

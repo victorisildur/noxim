@@ -151,13 +151,13 @@ void showConfig()
     cout << "Using the following configuration: " << endl
          << "- verbose_mode = " << GlobalParams::verbose_mode << endl
          << "- trace_mode = " << GlobalParams::trace_mode << endl
-      // << "- trace_filename = " << GlobalParams::trace_filename << endl
+        // << "- trace_filename = " << GlobalParams::trace_filename << endl
          << "- mesh_dim_x = " << GlobalParams::mesh_dim_x << endl
          << "- mesh_dim_y = " << GlobalParams::mesh_dim_y << endl
          << "- buffer_depth = " << GlobalParams::buffer_depth << endl
          << "- max_packet_size = " << GlobalParams::max_packet_size << endl
          << "- routing_algorithm = " << GlobalParams::routing_algorithm << endl
-      // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
+        // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
          << "- selection_strategy = " << GlobalParams::selection_strategy << endl
          << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
          << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
@@ -171,85 +171,85 @@ void showConfig()
 void checkConfiguration()
 {
     if (GlobalParams::mesh_dim_x <= 1) {
-	cerr << "Error: dimx must be greater than 1" << endl;
-	exit(1);
+        cerr << "Error: dimx must be greater than 1" << endl;
+        exit(1);
     }
 
     if (GlobalParams::mesh_dim_y <= 1) {
-	cerr << "Error: dimy must be greater than 1" << endl;
-	exit(1);
+        cerr << "Error: dimy must be greater than 1" << endl;
+        exit(1);
     }
 
     if (GlobalParams::buffer_depth < 1) {
-	cerr << "Error: buffer must be >= 1" << endl;
-	exit(1);
+        cerr << "Error: buffer must be >= 1" << endl;
+        exit(1);
     }
 
     if (GlobalParams::min_packet_size < 2 ||
-	GlobalParams::max_packet_size < 2) {
-	cerr << "Error: packet size must be >= 2" << endl;
-	exit(1);
+        GlobalParams::max_packet_size < 2) {
+        cerr << "Error: packet size must be >= 2" << endl;
+        exit(1);
     }
 
     if (GlobalParams::min_packet_size >
-	GlobalParams::max_packet_size) {
-	cerr << "Error: min packet size must be less than max packet size"
-	    << endl;
-	exit(1);
+        GlobalParams::max_packet_size) {
+        cerr << "Error: min packet size must be less than max packet size"
+             << endl;
+        exit(1);
     }
 
     if (GlobalParams::selection_strategy.compare("INVALID_SELECTION") == 0) {
-	cerr << "Error: invalid selection policy" << endl;
-	exit(1);
+        cerr << "Error: invalid selection policy" << endl;
+        exit(1);
     }
 
     if (GlobalParams::packet_injection_rate <= 0.0 ||
-	GlobalParams::packet_injection_rate > 1.0) {
-	cerr <<
-	    "Error: packet injection rate mmust be in the interval ]0,1]"
-	    << endl;
-	exit(1);
+        GlobalParams::packet_injection_rate > 1.0) {
+        cerr <<
+            "Error: packet injection rate mmust be in the interval ]0,1]"
+             << endl;
+        exit(1);
     }
 
 
     for (unsigned int i = 0; i < GlobalParams::hotspots.size(); i++) {
-	if (GlobalParams::hotspots[i].first >=
-	    GlobalParams::mesh_dim_x *
-	    GlobalParams::mesh_dim_y) {
-	    cerr << "Error: hotspot node " << GlobalParams::
-		hotspots[i].first << " is invalid (out of range)" << endl;
-	    exit(1);
-	}
-	if (GlobalParams::hotspots[i].second < 0.0
-	    && GlobalParams::hotspots[i].second > 1.0) {
-	    cerr <<
-		"Error: hotspot percentage must be in the interval [0,1]"
-		<< endl;
-	    exit(1);
-	}
+        if (GlobalParams::hotspots[i].first >=
+            GlobalParams::mesh_dim_x *
+            GlobalParams::mesh_dim_y) {
+            cerr << "Error: hotspot node " << GlobalParams::
+                hotspots[i].first << " is invalid (out of range)" << endl;
+            exit(1);
+        }
+        if (GlobalParams::hotspots[i].second < 0.0
+                                               && GlobalParams::hotspots[i].second > 1.0) {
+            cerr <<
+                "Error: hotspot percentage must be in the interval [0,1]"
+                 << endl;
+            exit(1);
+        }
     }
 
     if (GlobalParams::stats_warm_up_time < 0) {
-	cerr << "Error: warm-up time must be positive" << endl;
-	exit(1);
+        cerr << "Error: warm-up time must be positive" << endl;
+        exit(1);
     }
 
     if (GlobalParams::simulation_time < 0) {
-	cerr << "Error: simulation time must be positive" << endl;
-	exit(1);
+        cerr << "Error: simulation time must be positive" << endl;
+        exit(1);
     }
 
     if (GlobalParams::stats_warm_up_time >
-	GlobalParams::simulation_time) {
-	cerr << "Error: warmup time must be less than simulation time" <<
-	    endl;
-	exit(1);
+        GlobalParams::simulation_time) {
+        cerr << "Error: warmup time must be less than simulation time" <<
+            endl;
+        exit(1);
     }
 
     if (GlobalParams::locality<0 || GlobalParams::locality>1)
     {
-	cerr << "Error: traffic locality must be in the range 0..1" << endl;
-	exit(1);
+        cerr << "Error: traffic locality must be in the range 0..1" << endl;
+        exit(1);
     }
 
 
@@ -258,130 +258,130 @@ void checkConfiguration()
 void parseCmdLine(int arg_num, char *arg_vet[])
 {
     if (arg_num == 1)
-	cout <<
-	    "Running with default parameters (use '-help' option to see how to override them)"
-	    << endl;
+        cout <<
+            "Running with default parameters (use '-help' option to see how to override them)"
+             << endl;
     else 
     {
-	for (int i = 1; i < arg_num; i++) 
-	{
-	    if (!strcmp(arg_vet[i], "-verbose"))
-		GlobalParams::verbose_mode = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-trace")) 
-	    {
-		GlobalParams::trace_mode = true;
-		GlobalParams::trace_filename = arg_vet[++i];
-	    } 
-	    else if (!strcmp(arg_vet[i], "-dimx"))
-		GlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-dimy"))
-		GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-buffer"))
-		GlobalParams::buffer_depth = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-winoc")) 
-		GlobalParams::use_winoc = true;
-	    else if (!strcmp(arg_vet[i], "-wirxsleep")) 
-		GlobalParams::use_wirxsleep = true;
-	    else if (!strcmp(arg_vet[i], "-size")) 
-	    {
-		GlobalParams::min_packet_size = atoi(arg_vet[++i]);
-		GlobalParams::max_packet_size = atoi(arg_vet[++i]);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-routing")) 
-	    {
-		GlobalParams::routing_algorithm = arg_vet[++i];
-		if (GlobalParams::routing_algorithm == ROUTING_DYAD)
-		    GlobalParams::dyad_threshold = atof(arg_vet[++i]);
-		else if (GlobalParams::routing_algorithm == ROUTING_TABLE_BASED) 
-		{
-		    GlobalParams::routing_table_filename = arg_vet[++i];
-		    GlobalParams::packet_injection_rate = 0;
-		} 
-	    } 
-	    else if (!strcmp(arg_vet[i], "-sel")) {
-		GlobalParams::selection_strategy = arg_vet[++i];
-	    } 
-	    else if (!strcmp(arg_vet[i], "-pir")) 
-	    {
-		GlobalParams::packet_injection_rate = atof(arg_vet[++i]);
-		char *distribution = arg_vet[++i];
-		if (!strcmp(distribution, "poisson"))
-		    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate;
-		else if (!strcmp(distribution, "burst")) 
-		{
-		    double burstness = atof(arg_vet[++i]);
-		    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate / (1 - burstness);
-		} 
-		else if (!strcmp(distribution, "pareto")) {
-		    double Aon = atof(arg_vet[++i]);
-		    double Aoff = atof(arg_vet[++i]);
-		    double r = atof(arg_vet[++i]);
-		    GlobalParams::probability_of_retransmission =
-			GlobalParams::packet_injection_rate *
-			pow((1 - r), (1 / Aoff - 1 / Aon));
-		} 
-		else if (!strcmp(distribution, "custom"))
-		    GlobalParams::probability_of_retransmission = atof(arg_vet[++i]);
-		else assert("Invalid pir format" && false);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-traffic")) 
-	    {
-		char *traffic = arg_vet[++i];
-		if (!strcmp(traffic, "random")) GlobalParams::traffic_distribution = TRAFFIC_RANDOM;
-		else if (!strcmp(traffic, "transpose1"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TRANSPOSE1;
-		else if (!strcmp(traffic, "transpose2"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TRANSPOSE2;
-		else if (!strcmp(traffic, "bitreversal"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_BIT_REVERSAL;
-		else if (!strcmp(traffic, "butterfly"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_BUTTERFLY;
-		else if (!strcmp(traffic, "shuffle"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_SHUFFLE;
-		else if (!strcmp(traffic, "table")) {
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TABLE_BASED;
-		    GlobalParams::traffic_table_filename = arg_vet[++i];
-		} else if (!strcmp(traffic, "local")) {
-		    GlobalParams::traffic_distribution = TRAFFIC_LOCAL;
-		    GlobalParams::locality=atof(arg_vet[++i]);
-		}
-		else assert(false);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-hs")) 
-	    {
-		int node = atoi(arg_vet[++i]);
-		double percentage = atof(arg_vet[++i]);
-		pair < int, double >t(node, percentage);
-		GlobalParams::hotspots.push_back(t);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-warmup"))
-		GlobalParams::stats_warm_up_time = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-seed"))
-		GlobalParams::rnd_generator_seed = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-detailed"))
-		GlobalParams::detailed = true;
-	    else if (!strcmp(arg_vet[i], "-show_buf_stats"))
-		GlobalParams::show_buffer_stats = true;
-	    else if (!strcmp(arg_vet[i], "-volume"))
-		GlobalParams::max_volume_to_be_drained =
-		    atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-sim"))
-		GlobalParams::simulation_time = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-config"))
-		// -config is managed from configure function
-		// i++ skips the configuration file name 
-		i++;
-	    else {
-		cerr << "Error: Invalid option: " << arg_vet[i] << endl;
-		exit(1);
-	    }
-	}
+        for (int i = 1; i < arg_num; i++) 
+        {
+            if (!strcmp(arg_vet[i], "-verbose"))
+                GlobalParams::verbose_mode = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-trace")) 
+            {
+                GlobalParams::trace_mode = true;
+                GlobalParams::trace_filename = arg_vet[++i];
+            } 
+            else if (!strcmp(arg_vet[i], "-dimx"))
+                GlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-dimy"))
+                GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-buffer"))
+                GlobalParams::buffer_depth = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-winoc")) 
+                GlobalParams::use_winoc = true;
+            else if (!strcmp(arg_vet[i], "-wirxsleep")) 
+                GlobalParams::use_wirxsleep = true;
+            else if (!strcmp(arg_vet[i], "-size")) 
+            {
+                GlobalParams::min_packet_size = atoi(arg_vet[++i]);
+                GlobalParams::max_packet_size = atoi(arg_vet[++i]);
+            } 
+            else if (!strcmp(arg_vet[i], "-routing")) 
+            {
+                GlobalParams::routing_algorithm = arg_vet[++i];
+                if (GlobalParams::routing_algorithm == ROUTING_DYAD)
+                    GlobalParams::dyad_threshold = atof(arg_vet[++i]);
+                else if (GlobalParams::routing_algorithm == ROUTING_TABLE_BASED) 
+                {
+                    GlobalParams::routing_table_filename = arg_vet[++i];
+                    GlobalParams::packet_injection_rate = 0;
+                } 
+            } 
+            else if (!strcmp(arg_vet[i], "-sel")) {
+                GlobalParams::selection_strategy = arg_vet[++i];
+            } 
+            else if (!strcmp(arg_vet[i], "-pir")) 
+            {
+                GlobalParams::packet_injection_rate = atof(arg_vet[++i]);
+                char *distribution = arg_vet[++i];
+                if (!strcmp(distribution, "poisson"))
+                    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate;
+                else if (!strcmp(distribution, "burst")) 
+                {
+                    double burstness = atof(arg_vet[++i]);
+                    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate / (1 - burstness);
+                } 
+                else if (!strcmp(distribution, "pareto")) {
+                    double Aon = atof(arg_vet[++i]);
+                    double Aoff = atof(arg_vet[++i]);
+                    double r = atof(arg_vet[++i]);
+                    GlobalParams::probability_of_retransmission =
+                        GlobalParams::packet_injection_rate *
+                        pow((1 - r), (1 / Aoff - 1 / Aon));
+                } 
+                else if (!strcmp(distribution, "custom"))
+                    GlobalParams::probability_of_retransmission = atof(arg_vet[++i]);
+                else assert("Invalid pir format" && false);
+            } 
+            else if (!strcmp(arg_vet[i], "-traffic")) 
+            {
+                char *traffic = arg_vet[++i];
+                if (!strcmp(traffic, "random")) GlobalParams::traffic_distribution = TRAFFIC_RANDOM;
+                else if (!strcmp(traffic, "transpose1"))
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_TRANSPOSE1;
+                else if (!strcmp(traffic, "transpose2"))
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_TRANSPOSE2;
+                else if (!strcmp(traffic, "bitreversal"))
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_BIT_REVERSAL;
+                else if (!strcmp(traffic, "butterfly"))
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_BUTTERFLY;
+                else if (!strcmp(traffic, "shuffle"))
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_SHUFFLE;
+                else if (!strcmp(traffic, "table")) {
+                    GlobalParams::traffic_distribution =
+                        TRAFFIC_TABLE_BASED;
+                    GlobalParams::traffic_table_filename = arg_vet[++i];
+                } else if (!strcmp(traffic, "local")) {
+                    GlobalParams::traffic_distribution = TRAFFIC_LOCAL;
+                    GlobalParams::locality=atof(arg_vet[++i]);
+                }
+                else assert(false);
+            } 
+            else if (!strcmp(arg_vet[i], "-hs")) 
+            {
+                int node = atoi(arg_vet[++i]);
+                double percentage = atof(arg_vet[++i]);
+                pair < int, double >t(node, percentage);
+                GlobalParams::hotspots.push_back(t);
+            } 
+            else if (!strcmp(arg_vet[i], "-warmup"))
+                GlobalParams::stats_warm_up_time = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-seed"))
+                GlobalParams::rnd_generator_seed = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-detailed"))
+                GlobalParams::detailed = true;
+            else if (!strcmp(arg_vet[i], "-show_buf_stats"))
+                GlobalParams::show_buffer_stats = true;
+            else if (!strcmp(arg_vet[i], "-volume"))
+                GlobalParams::max_volume_to_be_drained =
+                    atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-sim"))
+                GlobalParams::simulation_time = atoi(arg_vet[++i]);
+            else if (!strcmp(arg_vet[i], "-config"))
+                // -config is managed from configure function
+                // i++ skips the configuration file name 
+                i++;
+            else {
+                cerr << "Error: Invalid option: " << arg_vet[i] << endl;
+                exit(1);
+            }
+        }
     }
 
 }
@@ -393,8 +393,8 @@ void configure(int arg_num, char *arg_vet[]) {
 
     for (int i = 1; i < arg_num; i++) {
 	    if (!strcmp(arg_vet[i], "-help")) {
-		showHelp(arg_vet[0]);
-		exit(0);
+            showHelp(arg_vet[0]);
+            exit(0);
         }
     }
 
@@ -425,5 +425,5 @@ void configure(int arg_num, char *arg_vet[]) {
 
     // Show configuration
     if (GlobalParams::verbose_mode > VERBOSE_OFF)
-	showConfig();
+        showConfig();
 }

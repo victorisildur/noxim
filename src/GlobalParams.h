@@ -37,6 +37,11 @@ using namespace std;
 // To mark invalid or non exhistent values
 #define NOT_VALID             -1
 
+// Define the waiting list as booleans
+
+#define WAITING true
+#define NOT_WAITING false
+
 // Routing algorithms
 #define ROUTING_DYAD           "DYAD"
 #define ROUTING_TABLE_BASED    "TABLE_BASED"

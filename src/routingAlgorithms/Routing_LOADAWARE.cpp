@@ -75,6 +75,7 @@ int Routing_LOADAWARE::coord2Label(const Coord coord)
 {
     int x = coord.x;
     int y = coord.y;
+
     if(y%2 == 0)
         return (y * GlobalParams::mesh_dim_x + x);
     else
