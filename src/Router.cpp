@@ -224,57 +224,54 @@ void Router::reserveOutputsForInput(int i)
     power.bufferRouterFront();
 
     // only flit head needs reserving
-    if (flit.flit_type == FLIT_TYPE_HEAD) {
-        // prepare data for routing
-        RouteData route_data;
-        route_data.current_id = local_id;
-        route_data.src_id = flit.src_id;
-        route_data.dst_id = flit.dst_id;
-        route_data.dir_in = i;
-        route_data.broadcast_routine = flit.broadcast_routine;
+    if (flit.flit_type != FLIT_TYPE_HEAD)
+        return;
 
-        // routing
-        vector<int> out_ports = route(route_data);
-        if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-            LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
+    // prepare data for routing
+    RouteData route_data;
+    route_data.current_id = local_id;
+    route_data.src_id = flit.src_id;
+    route_data.dst_id = flit.dst_id;
+    route_data.dir_in = i;
+    route_data.broadcast_routine = flit.broadcast_routine;
 
-        // put i -> out_ports into the reservation table, must reserve all at once!
-        bool all_available = true;
+    // routing
+    vector<int> out_ports = route(route_data);
+    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+        LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
+
+    // put i -> out_ports into the reservation table, must reserve all at once!
+    bool all_available = true;
+    for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+        int o = *it;
+        if (!reservation_table.isAvailable(o)) {
+            if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
+            all_available = false;
+        } 
+    }
+    if (all_available) {
         for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
             int o = *it;
-            if (!reservation_table.isAvailable(o)) {
-                if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                    LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
-                all_available = false;
-            } 
+            assert (reservation_table.isAvailable(o));
+            reservation_table.reserve(i,o);
         }
-        if (all_available) {
-            for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                int o = *it;
-                assert (reservation_table.isAvailable(o));
-                reservation_table.reserve(i,o);
-            }
-            if (out_ports.size() > 1)
-                LOG << " all available for flit: " << flit << endl;
+        if (out_ports.size() > 1)
+            LOG << " all available for flit: " << flit << endl;
 
-            _waiting_list[i] = NOT_WAITING;
+        _waiting_list[i] = NOT_WAITING;
 
+    } else {
+        if (out_ports.size() > 1) {
+            // Don't release any output here! May be taken by unicast! One only release himself!
+            // Key move! for multi_outports, give it high priority
+            _waiting_list[i] = WAITING;  
+            LOG << " not all good for flit: " << flit << endl;
         } else {
-            if (out_ports.size() > 1) {
-                // release multi_ports
-                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                    int o = *it;
-                    if (!reservation_table.isAvailable(o))
-                        reservation_table.release(o);
-                }
-                // key move! for multi_outports, give it high priority
-                _waiting_list[i] = WAITING;  
-                LOG << " not all good for flit: " << flit << endl;
-            } else {
-                _waiting_list[i] = NOT_WAITING;
-            }
+            _waiting_list[i] = NOT_WAITING;
         }
     }
+
 }
 
 NoP_data Router::getCurrentNoPData()
