@@ -64,8 +64,7 @@ SC_MODULE(Router)
     int routing_type;		                // Type of routing algorithm
     int selection_type;
     Buffer buffer[DIRECTIONS + 2];	        // Buffer for each input channel 
-    int _waiting_list[DIRECTIONS + 2];     // inputs that waiting for multi outputs
-    int _wanted_list[DIRECTIONS + 2];       // outputs that are wanted by waiting_list
+
     int  _broadcast_routine;
     bool current_level_rx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
