@@ -29,24 +29,31 @@ vector<int> Routing_RPATH::route(Router * router, const RouteData & routeData)
             curr_label = coord2Vlabel(current);
             src_label = coord2Vlabel(source);
         }
-        Coord next;
+
         if (curr_label >= src_label && 
             curr_label < GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y - 1) 
         {
+            Coord next1;
             if (routeData.path_dir == PATH_HORIZONTAL)
-                next = hlabel2Coord(curr_label + 1);
+                next1 = hlabel2Coord(curr_label + 1);
             else
-                next = vlabel2Coord(curr_label + 1);
-            directions.push_back(calcDir(next,current));
+                next1 = vlabel2Coord(curr_label + 1);
+            directions.push_back(calcDir(next1,current));
+            if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
+                LOG_EZ << "nx,ny: " << next1.x << "," << next1.y << endl;
         }
+
         if (curr_label <= src_label && 
             curr_label > 0) 
         {
+            Coord next2;
             if (routeData.path_dir == PATH_HORIZONTAL)
-                next = vlabel2Coord(curr_label - 1);
+                next2 = hlabel2Coord(curr_label - 1);
             else
-                next = vlabel2Coord(curr_label - 1);
-            directions.push_back(calcDir(next,current));
+                next2 = vlabel2Coord(curr_label - 1);
+            directions.push_back(calcDir(next2,current));
+            if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
+                LOG_EZ << "nx,ny: " << next2.x << "," << next2.y << endl;
         }
     } 
     else 

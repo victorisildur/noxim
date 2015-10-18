@@ -88,18 +88,33 @@ void Router::txProcess()
             req_tx[i].write(0);
             current_level_tx[i] = 0;
             _waiting_list[i] = NOT_WAITING;
+            _wanted_list[i] = 0;
         }
     } 
     else {
         // 1st phase: Reservation
         vector<int> waiting_inputs;
         vector<int> not_waiting_inputs;
-        for (int j = 0; j < DIRECTIONS + 2; j++) {
-            int i = (start_from_port + j) % (DIRECTIONS + 2);
-            if (_waiting_list[i] == WAITING)
-                waiting_inputs.push_back(i);
-            else
-                not_waiting_inputs.push_back(i);
+        double scan_rnd = rand() / RAND_MAX;
+        if (scan_rnd < 0.5) 
+        {
+            for (int j = 0; j < DIRECTIONS + 2; j++) {
+                int i = (start_from_port + j) % (DIRECTIONS + 2);
+                if (_waiting_list[i] == WAITING)
+                    waiting_inputs.push_back(i);
+                else
+                    not_waiting_inputs.push_back(i);
+            }
+        }
+        else
+        {
+            for (int j = DIRECTIONS + 1; j >= 0; j--) {
+                int i = (start_from_port + j) % (DIRECTIONS + 2);
+                if (_waiting_list[i] == WAITING)
+                    waiting_inputs.push_back(i);
+                else
+                    not_waiting_inputs.push_back(i);
+            }
         }
         for (vector<int>::iterator it = waiting_inputs.begin(); it != waiting_inputs.end(); ++it)
         {
@@ -155,9 +170,9 @@ void Router::txProcess()
                     if (flit.dst_id == local_id)
                         power.networkInterface();
 
-                    if (flit.flit_type == FLIT_TYPE_TAIL) { /* always release? */
+                    if (flit.flit_type == FLIT_TYPE_TAIL) { 
                         if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                            LOG << "release reservation table for filt " << flit << endl;
+                            LOG << "release reservation " << i << "->" << o << ", for filt " << flit << endl;
                         reservation_table.release(o);
                     }
                     // Update stats
@@ -181,10 +196,13 @@ void Router::txProcess()
                 }
                 else { /* current_level_tx[o] != ack_tx[o].read() */
                     if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                        LOG << " cannot forward Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
+                        LOG << " cannot forward Input[" << i << "] forward to Output[" << o << "], flit: " << flit 
+                            << " , ABP error!" << endl;
 
                     // last flit hasn't transmitted, in this case, don't pop buffer!
-                    if (flit.flit_type == FLIT_TYPE_HEAD)
+                    // oh my god, if flit want multiple output, it's head is reserving multi output now. DON'T RELEASE!
+                    // however, unicast flit head can give up
+                    if (flit.flit_type == FLIT_TYPE_HEAD && output_ports.size() <= 1)
                         reservation_table.release(o); 
                 }
             } // end for. all output_ports have written the flit
@@ -198,6 +216,10 @@ void Router::txProcess()
                 power.bufferRouterPop();
                 // i all not transmitted for next flit
                 reservation_table.clear_outputs_transmitted(output_ports);
+                // flit transmitted, state transfer WAITING_DONE -> NOT_WAITING
+                if (_waiting_list[i] == WAITING_DONE) {
+                    _waiting_list[i] = NOT_WAITING;
+                }
             }
             else
             {
@@ -247,31 +269,78 @@ void Router::reserveOutputsForInput(int i)
         int o = *it;
         if (!reservation_table.isAvailable(o)) {
             if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                LOG << " cannot reserve direction " << o << " for flit " << flit << endl;
+                LOG << " cannot reserve direction " << o << " for flit " << flit 
+                    << " ,o: " << o << " is reserved by " << reservation_table.getReservingInput(o) << endl;
             all_available = false;
-            break;
-        } 
+        } else {
+            if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
+                LOG << " direction " << o << " is available for flit " << flit << ", which input from " << i << endl;
+        }
     }
     if (all_available) {
         for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
             int o = *it;
+            if (out_ports.size() <= 1 && _wanted_list[o] > 0) {
+                // unicast is blocked!
+                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                    LOG << " flit blocked: " << flit << ", when output to " << o 
+                        << ", which is reserved by " << reservation_table.getReservingInput(o) << endl;
+                break; 
+            }
             assert (reservation_table.isAvailable(o));
             reservation_table.reserve(i,o);
         }
-        if (out_ports.size() > 1)
+
+        if (out_ports.size() > 1) {
+            // unlock outputs
+            if (_waiting_list[i] == WAITING) {
+                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                    LOG << " input " << i << " its waiting finally ended. flit: " << flit << endl;
+                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+                    _wanted_list[*it] --;
+                    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                        LOG << " unlock output " << *it << endl;
+                }
+            }
+            // WAITING or NOT_WAITING, all WAITING_DONE now
+            _waiting_list[i] = WAITING_DONE;
+
             if (GlobalParams::verbose_mode >= VERBOSE_LOW)
                 LOG << " all available for flit: " << flit << endl;
-
-        _waiting_list[i] = NOT_WAITING;
-
-    } else {
+        }
+    } 
+    else // cannot reserve all output ports
+    {
         if (out_ports.size() > 1) {
-            // Don't release any output here! May be taken by unicast! One only release himself!
-            // Key move! for multi_outports, give it high priority
-            _waiting_list[i] = WAITING;  
             if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                LOG << " not all good for flit: " << flit << endl;
-        } else {
+                LOG << " input " << i << " want outputs because of flit: " << flit << endl;
+
+            // lock outputs
+            if (_waiting_list[i] == NOT_WAITING) // cannot lock when waiting done, it'll duplicate
+            {
+                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+                    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
+                        LOG << " locking output " << *it << ", which is wanted " << _wanted_list[*it] + 1 << "times." << endl;
+                    _wanted_list[*it] ++;
+                }
+                
+                // Don't release any output here! May be taken by unicast! One only release himself!
+                // Key move! for multi_outports, give it high priority
+                _waiting_list[i] = WAITING;
+
+                if (GlobalParams::verbose_mode >= VERBOSE_LOW) {
+                    LOG << " not all good for flit: " << flit << endl;
+                    for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
+                        LOG << "   " << i << " -> " << *it 
+                            << " available: " << reservation_table.isAvailable(*it) << endl;
+                        LOG << "   output " << *it << " is reserved by input " 
+                            << reservation_table.getReservingInput(*it) << endl;
+                    }
+                }
+
+            }
+
+        } else { // unicast flit
             _waiting_list[i] = NOT_WAITING;
         }
     }
@@ -334,7 +403,7 @@ vector < int > Router::routingFunction(const RouteData & route_data)
             return dirv;
         }
     }
-    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
+    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
         LOG << "Wired routing for dst = " << route_data.dst_id << endl;
 
     return routingAlgorithm->route(this, route_data);

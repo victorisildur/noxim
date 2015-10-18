@@ -39,8 +39,9 @@ using namespace std;
 
 // Define the waiting list as booleans
 
-#define WAITING true
-#define NOT_WAITING false
+#define WAITING                0
+#define NOT_WAITING            1
+#define WAITING_DONE           2
 
 // Routing algorithms
 #define ROUTING_DYAD           "DYAD"

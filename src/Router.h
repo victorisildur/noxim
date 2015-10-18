@@ -58,20 +58,21 @@ SC_MODULE(Router)
     // Registers
 
     /*
-       Coord position;                     // Router position inside the mesh
+       Coord position;                      // Router position inside the mesh
      */
-    int local_id;		                // Unique ID
+    int local_id;		                    // Unique ID
     int routing_type;		                // Type of routing algorithm
     int selection_type;
     Buffer buffer[DIRECTIONS + 2];	        // Buffer for each input channel 
-    bool _waiting_list[DIRECTIONS + 2];
+    int _waiting_list[DIRECTIONS + 2];     // inputs that waiting for multi outputs
+    int _wanted_list[DIRECTIONS + 2];       // outputs that are wanted by waiting_list
     int  _broadcast_routine;
     bool current_level_rx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
-    Stats stats;		                // Statistics
+    Stats stats;		                    // Statistics
     Power power;
-    LocalRoutingTable routing_table;	// Routing table
-    ReservationTable reservation_table;	// Switch reservation table
+    LocalRoutingTable routing_table;	    // Routing table
+    ReservationTable reservation_table;	    // Switch reservation table
     int start_from_port;	                // Port from which to start the reservation cycle
     unsigned long routed_flits;
     RoutingAlgorithm * routingAlgorithm; 

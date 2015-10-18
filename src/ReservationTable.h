@@ -27,6 +27,8 @@ public:
 
     // check if port_out is reservable
     bool isAvailable(const int port_out);
+    // get the port_out's reserving port_in
+    int getReservingInput(const int port_out);
 
     // Connects port_in with port_out. Asserts if port_out is reserved
     void reserve(const int port_in, const int port_out);

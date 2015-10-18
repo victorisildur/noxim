@@ -27,6 +27,16 @@ bool ReservationTable::isAvailable(const int port_out)
     return (rtable[port_out].first == NOT_RESERVED);
 }
 
+int ReservationTable::getReservingInput(const int port_out)
+{
+    if (rtable.find(port_out) == rtable.end())
+        return -999;
+    
+    if (rtable[port_out].first == NOT_VALID) throw NOT_VALID;
+
+    return rtable[port_out].first;
+}
+
 void ReservationTable::reserve(const int port_in, const int port_out)
 {
     // reservation of reserved/not valid ports is illegal. Correctness

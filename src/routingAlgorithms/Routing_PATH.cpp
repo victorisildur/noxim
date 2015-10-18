@@ -23,18 +23,20 @@ vector<int> Routing_PATH::route(Router * router, const RouteData & routeData)
         /* broadcast, path-based */
         int curr_label = coord2Label(current);
         int src_label = coord2Label(source);
-        Coord next;
+
         if (curr_label >= src_label && 
             curr_label < GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y - 1) 
         {
-            next = label2Coord(curr_label + 1);
-            directions.push_back(calcDir(next,current));
+            Coord next1;
+            next1 = label2Coord(curr_label + 1);
+            directions.push_back(calcDir(next1,current));
         }
         if (curr_label <= src_label && 
             curr_label > 0) 
         {
-            next = label2Coord(curr_label - 1);
-            directions.push_back(calcDir(next,current));
+            Coord next2;
+            next2 = label2Coord(curr_label - 1);
+            directions.push_back(calcDir(next2,current));
         }
     } 
     else 
