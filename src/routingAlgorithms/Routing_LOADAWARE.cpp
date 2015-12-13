@@ -22,25 +22,34 @@ vector<int> Routing_LOADAWARE::route(Router * router, const RouteData & routeDat
     {
         if (routeData.broadcast_routine == BROADCAST_PATH)
         {
+            if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
+                LOG_EZ << "path routing" << endl;
+
             /* path-based */
-            int curr_label = coord2Label(current);
-            int src_label = coord2Label(source);
-            Coord next;
+            int curr_label = coord2Hlabel(current);
+            int src_label = coord2Hlabel(source);
+
             if (curr_label >= src_label && 
                 curr_label < GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y - 1) 
             {
-                next = label2Coord(curr_label + 1);
-                directions.push_back(calcDir(next,current));
+                Coord next1;
+                next1 = hlabel2Coord(curr_label + 1);
+                directions.push_back(calcDir(next1,current));
             }
             if (curr_label <= src_label && 
                 curr_label > 0) 
             {
-                next = label2Coord(curr_label - 1);
-                directions.push_back(calcDir(next,current));
+                Coord next2;
+                next2 = hlabel2Coord(curr_label - 1);
+                directions.push_back(calcDir(next2,current));
             }
+
         }
         else {
             /* tree-based */
+            if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
+                LOG_EZ << "tree routing" << endl;
+
             if (current.y >= source.y && current.y < GlobalParams::mesh_dim_y - 1)
                 directions.push_back(DIRECTION_SOUTH);
             if (current.y <= source.y && current.y > 0)
@@ -71,18 +80,17 @@ vector<int> Routing_LOADAWARE::route(Router * router, const RouteData & routeDat
     return directions;
 }
 
-int Routing_LOADAWARE::coord2Label(const Coord coord)
+int Routing_LOADAWARE::coord2Hlabel(const Coord coord)
 {
     int x = coord.x;
     int y = coord.y;
-
     if(y%2 == 0)
         return (y * GlobalParams::mesh_dim_x + x);
     else
         return ( (y+1) * GlobalParams::mesh_dim_x - x -1 );
 }
 
-Coord Routing_LOADAWARE::label2Coord(const int label)
+Coord Routing_LOADAWARE::hlabel2Coord(const int label)
 {
     Coord coord;
     if( (label / GlobalParams::mesh_dim_x) % 2 == 0) {
@@ -92,6 +100,30 @@ Coord Routing_LOADAWARE::label2Coord(const int label)
     else {
         coord.y = label / GlobalParams::mesh_dim_x;
         coord.x = (coord.y + 1) * GlobalParams::mesh_dim_x - label - 1;
+    }
+    return coord;
+}
+
+int Routing_LOADAWARE::coord2Vlabel(const Coord coord)
+{
+    int x = coord.x;
+    int y = coord.y;
+    if(x%2 == 0)
+        return (x * GlobalParams::mesh_dim_y + y);
+    else
+        return ( (x+1) * GlobalParams::mesh_dim_y - y -1 );
+}
+
+Coord Routing_LOADAWARE::vlabel2Coord(const int label)
+{
+    Coord coord;
+    if( (label / GlobalParams::mesh_dim_y) % 2 == 0) {
+        coord.x = label / GlobalParams::mesh_dim_y;
+        coord.y = label - coord.x * GlobalParams::mesh_dim_y;
+    }
+    else {
+        coord.x = label / GlobalParams::mesh_dim_y;
+        coord.y = (coord.x + 1) * GlobalParams::mesh_dim_y - label - 1;
     }
     return coord;
 }

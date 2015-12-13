@@ -33,13 +33,12 @@ void Router::rxProcess()
             // 2) there is a free slot in the input buffer of direction i
 
             if ((req_rx[i].read() == 1 - current_level_rx[i])
-                && !buffer[i].IsFull()) 
-            {
+                && !buffer[i].IsFull()) {
                 Flit received_flit = flit_rx[i].read();
 
                 // if a new flit is injected from local PE
-                if (received_flit.src_id == local_id) {
-                    power.networkInterface();
+                if (received_flit.src_id == local_id)
+                {
                     // set broadcast routine for broadcast flits
                     if (received_flit.dst_id == -1)
                     {
@@ -49,11 +48,9 @@ void Router::rxProcess()
                             received_flit.broadcast_routine = BROADCAST_TREE;
                             if (isInjectCongested()) {
                                 received_flit.broadcast_routine = BROADCAST_PATH;
-                                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                                    LOG << "a congested broadcast, flit:" << received_flit << endl;
+                                LOG_L << " congested, flit: " << received_flit << endl;
                             } else {
-                                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                                    LOG << "an idle broadcast, flit:" << received_flit << endl;
+                                LOG_L << " idle, flit: " << received_flit << endl;
                             }
                             _broadcast_routine = received_flit.broadcast_routine;
                         }
@@ -63,14 +60,18 @@ void Router::rxProcess()
                             received_flit.broadcast_routine = _broadcast_routine;
                         }
                     }
+                    power.networkInterface();
                 }
 
                 // Store the incoming flit in the circular buffer
                 buffer[i].Push(received_flit);
+
                 power.bufferRouterPush();
 
                 // Negate the old value for Alternating Bit Protocol (ABP)
                 current_level_rx[i] = 1 - current_level_rx[i];
+
+
             }
             ack_rx[i].write(current_level_rx[i]);
         }
@@ -81,270 +82,241 @@ void Router::rxProcess()
 
 void Router::txProcess()
 {
-    if (reset.read()) {
+    if (reset.read()) 
+    {
         // Clear outputs and indexes of transmitting protocol
         for (int i = 0; i < DIRECTIONS + 2; i++) 
         {
             req_tx[i].write(0);
             current_level_tx[i] = 0;
-            _waiting_list[i] = NOT_WAITING;
-            _wanted_list[i] = 0;
         }
     } 
-    else {
-        // 1st phase: Reservation
-        vector<int> waiting_inputs;
-        vector<int> not_waiting_inputs;
-        double scan_rnd = rand() / RAND_MAX;
-        if (scan_rnd < 0.5) 
-        {
-            for (int j = 0; j < DIRECTIONS + 2; j++) {
-                int i = (start_from_port + j) % (DIRECTIONS + 2);
-                if (_waiting_list[i] == WAITING)
-                    waiting_inputs.push_back(i);
-                else
-                    not_waiting_inputs.push_back(i);
-            }
+    else 
+    {
+
+        for (int j = 0; j < DIRECTIONS + 2; j++) {
+            int i = (start_from_port + j) % (DIRECTIONS + 2);
+            // 1st phase: Reservation
+            reserveForInput(i);
+            // 2nd phase: Backup
+            backupInput(i);
         }
-        else
-        {
-            for (int j = DIRECTIONS + 1; j >= 0; j--) {
-                int i = (start_from_port + j) % (DIRECTIONS + 2);
-                if (_waiting_list[i] == WAITING)
-                    waiting_inputs.push_back(i);
-                else
-                    not_waiting_inputs.push_back(i);
-            }
-        }
-        for (vector<int>::iterator it = waiting_inputs.begin(); it != waiting_inputs.end(); ++it)
-        {
-            reserveOutputsForInput(*it);
-        }
-        for (vector<int>::iterator it = not_waiting_inputs.begin(); it != not_waiting_inputs.end(); ++it)
-        {
-            reserveOutputsForInput(*it);
-        }
+
         start_from_port++;
 
-
-        // 2nd phase: Forwarding
-        for (int i = 0; i < DIRECTIONS + 2; i++) 
-        {
-            if (buffer[i].IsEmpty()) 
-                continue;
-      
-            // power contribution already computed in 1st phase
-            Flit flit = buffer[i].Front();
-            vector<int> output_ports = reservation_table.getOutputPorts(i);
-
-            if (output_ports.empty())
-                continue;
-
-            for (vector<int>::iterator it = output_ports.begin(); it != output_ports.end(); ++it) 
-            {
-                int o = *it;
-                if (reservation_table.has_transmitted(o)) // i->o has been forwarded
-                    continue;
-
-                if (current_level_tx[o] == ack_tx[o].read()) 
-                {
-                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                        LOG << "Input[" << i << "] forward to Output[" << o << "], flit: " << flit << endl;
-
-                    flit_tx[o].write(flit);
-                    if (o == DIRECTION_HUB) {
-                        power.r2hLink();
-                        LOG << "Forwarding to HUB " << flit << endl;
-                    } else {
-                        power.r2rLink();
-                    }
-
-                    power.crossBar();
-
-                    current_level_tx[o] = 1 - current_level_tx[o];
-                    req_tx[o].write(current_level_tx[o]);
-                    
-                    reservation_table.transmitted(o);
-                    
-                    // if flit has been consumed
-                    if (flit.dst_id == local_id)
-                        power.networkInterface();
-
-                    if (flit.flit_type == FLIT_TYPE_TAIL) { 
-                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                            LOG << "release reservation " << i << "->" << o << ", for filt " << flit << endl;
-                        reservation_table.release(o);
-                    }
-                    // Update stats
-                    if (o == DIRECTION_LOCAL) {
-                        if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                            LOG << "Consumed flit " << flit << endl;
-                        stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
-                        if (GlobalParams::max_volume_to_be_drained) {
-                            if (drained_volume >= GlobalParams:: max_volume_to_be_drained)
-                                sc_stop();
-                            else {
-                                drained_volume++;
-                                local_drained++;
-                            }
-                        }
-                    } 
-                    else if (i != DIRECTION_LOCAL) {
-                        // Increment routed flits counter
-                        routed_flits++;
-                    }
-                }
-                else { /* current_level_tx[o] != ack_tx[o].read() */
-                    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM)
-                        LOG << " cannot forward Input[" << i << "] forward to Output[" << o << "], flit: " << flit 
-                            << " , ABP error!" << endl;
-
-                    // last flit hasn't transmitted, in this case, don't pop buffer!
-                    // oh my god, if flit want multiple output, it's head is reserving multi output now. DON'T RELEASE!
-                    // however, unicast flit head can give up
-                    if (flit.flit_type == FLIT_TYPE_HEAD && output_ports.size() <= 1)
-                        reservation_table.release(o); 
-                }
-            } // end for. all output_ports have written the flit
-            
-            // pop buffer, only if all outputs for (i->outputs) has been transmitted
-            if (reservation_table.has_all_transmitted(output_ports)) 
-            {
-                if (GlobalParams::verbose_mode >= VERBOSE_HIGH)
-                    LOG << "has all transmitted, flit:" << flit << endl;
-                buffer[i].Pop();
-                power.bufferRouterPop();
-                // i all not transmitted for next flit
-                reservation_table.clear_outputs_transmitted(output_ports);
-                // flit transmitted, state transfer WAITING_DONE -> NOT_WAITING
-                if (_waiting_list[i] == WAITING_DONE) {
-                    _waiting_list[i] = NOT_WAITING;
-                }
-            }
-            else
-            {
-
-                if (GlobalParams::verbose_mode >= VERBOSE_HIGH) {
-                    LOG << "some has not been transmitted, flit:" << flit
-                        << ", output ports: " << endl;
-                    for (vector<int>::iterator it = output_ports.begin(); it != output_ports.end(); ++it) {
-                        LOG << "    " << *it << " " << endl;
-                    }
-                }
-            }
+        // 3rd phase: Forwarding
+        for (int i = 0; i < DIRECTIONS + 2; i++) {
+            forwardInput(i);
         }
     }
 }
 
-void Router::reserveOutputsForInput(int i)
+void Router::reserveForInput(int i)
 {
-    assert(i>=0 && i<DIRECTIONS+2);
-    if (buffer[i].IsEmpty()) {
+    /* Reserve by BACKUP's expect ports, 
+     * when backup is not empty and is expecting ports and is not backing up
+     */
+    if (!backup_unit[i].isEmpty() && 
+        backup_unit[i].getExpectPorts().size() > 0 &&
+        !backup_unit[i].isBackingUp() ) 
+    {
+        vector<int> backup_expecting_ports = backup_unit[i].getExpectPorts();
+        int o = backup_expecting_ports[0];
+        if (reservation_table.isChannelAvailable(i,o)) 
+        {
+            LOG_M << " reserve ok " << i << "->" << o << " for backup " << endl;
+            reservation_table.reserve(i, o);
+            backup_unit[i].deleteExpectPort(o);
+        } 
+        else
+        {
+            LOG_M << " cannot reserve " << i << "->" << o << " for backup " << endl;
+            LOG_M << o << " is occupied by " << reservation_table.getInputOccupyingOutput(o) << endl;
+        }
         return;
     }
+
+    /* Reserve by BUFFER's front, 
+     * only after BU has transmit done
+     */
+    //if (!buffer[i].deadlockFree())
+    if (false)
+    {
+        LOG << " deadlock on buffer input " << i << endl;
+        buffer[i].Print(" deadlock ");
+        for (int j=0; j<DIRECTIONS+2; j++) {
+            LOG << "          on buffer input " << j << endl;
+            buffer[j].Print("          ");
+        }
+        LOG << "reservation table:" << endl;
+        reservation_table.print();
+        for (int j=0; j<DIRECTIONS+2; j++) {
+            LOG << " on backup_unit " << j << endl;
+            backup_unit[j].print();
+        }
+        assert(false);
+    }
+
+    if (buffer[i].IsEmpty()) 
+        return;
+
     Flit flit = buffer[i].Front();
     power.bufferRouterFront();
 
-    // only flit head needs reserving
-    if (flit.flit_type != FLIT_TYPE_HEAD)
+    if (flit.flit_type == FLIT_TYPE_HEAD) 
+    {
+        // prepare data for routing
+        RouteData route_data;
+        route_data.current_id = local_id;
+        route_data.src_id = flit.src_id;
+        route_data.dst_id = flit.dst_id;
+        route_data.dir_in = i;
+        route_data.broadcast_routine = flit.broadcast_routine;
+        route_data.path_dir = flit.path_dir;
+
+        vector<int> output_ports = route(route_data);
+        int o = output_ports[0];
+
+        // try to reserve i->o
+        if (reservation_table.isChannelAvailable(i,o)) {
+            LOG_M << "reserve ok " << i << "->" << o << " for flit " << flit << endl;
+            reservation_table.reserve(i, o);
+            // reserve for buffer[i] ok
+            // but there are not reserved outputs, tell backup start to backup
+            if (output_ports.size() > 1)
+            {
+                LOG_M << "start backing up " << i << endl;
+                backup_unit[i].startBackUp();
+                vector<int> expect_ports;
+                for (vector<int>::iterator it = output_ports.begin(); it != output_ports.end(); ++it) 
+                {
+                    if (*it != o)
+                        expect_ports.push_back(*it);
+                }
+                backup_unit[i].setExpectPorts(expect_ports);
+            }
+
+        } else {
+            LOG_M << "cannot reserve " << i << "->" << o << " for flit " << flit << endl;
+            LOG_M << o << " is occupied by " << reservation_table.getInputOccupyingOutput(o) << endl;
+        }
+
+    }
+}
+
+void Router::backupInput(int i)
+{
+    if (!backup_unit[i].isBackingUp()) {
+        return;
+    }
+    if (buffer[i].IsEmpty())
+        return;
+    
+    Flit flit = buffer[i].Front();
+
+    LOG_M << "backing up " << i << " , flit: " << flit << endl;
+
+    backup_unit[i].backUp(flit);
+    
+}
+
+void Router::forwardInput(int i)
+{
+    Flit flit;
+    bool isFromBackup = false;
+
+    if (backup_unit[i].isEmpty() || backup_unit[i].isBackingUp()) {
+        // power contribution already computed in 1st phase
+        if (buffer[i].IsEmpty()) 
+            return;
+        flit = buffer[i].Front();
+    } else {
+        flit = backup_unit[i].front();
+        isFromBackup = true;
+    }
+    
+    int o = reservation_table.getOutputPort(i);
+    if (o == NOT_RESERVED) 
         return;
 
-    // prepare data for routing
-    RouteData route_data;
-    route_data.current_id = local_id;
-    route_data.src_id = flit.src_id;
-    route_data.dst_id = flit.dst_id;
-    route_data.dir_in = i;
-    route_data.broadcast_routine = flit.broadcast_routine;
-    route_data.path_dir = flit.path_dir;
-
-    // routing
-    vector<int> out_ports = route(route_data);
-    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-        LOG << " src,dst,curr: " << flit.src_id << "," << flit.dst_id << "," << local_id << endl;
-
-    // put i -> out_ports into the reservation table, must reserve all at once!
-    bool all_available = true;
-    for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-        int o = *it;
-        if (!reservation_table.isAvailable(o)) {
-            if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                LOG << " cannot reserve direction " << o << " for flit " << flit 
-                    << " ,o: " << o << " is reserved by " << reservation_table.getReservingInput(o) << endl;
-            all_available = false;
-        } else {
-            if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-                LOG << " direction " << o << " is available for flit " << flit << ", which input from " << i << endl;
-        }
-    }
-    if (all_available) {
-        for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-            int o = *it;
-            if (out_ports.size() <= 1 && _wanted_list[o] > 0) {
-                // unicast is blocked!
-                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                    LOG << " flit blocked: " << flit << ", when output to " << o 
-                        << ", which is reserved by " << reservation_table.getReservingInput(o) << endl;
-                break; 
-            }
-            assert (reservation_table.isAvailable(o));
-            reservation_table.reserve(i,o);
-        }
-
-        if (out_ports.size() > 1) {
-            // unlock outputs
-            if (_waiting_list[i] == WAITING) {
-                if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                    LOG << " input " << i << " its waiting finally ended. flit: " << flit << endl;
-                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                    _wanted_list[*it] --;
-                    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                        LOG << " unlock output " << *it << endl;
-                }
-            }
-            // WAITING or NOT_WAITING, all WAITING_DONE now
-            _waiting_list[i] = WAITING_DONE;
-
-            if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                LOG << " all available for flit: " << flit << endl;
-        }
-    } 
-    else // cannot reserve all output ports
+    if (current_level_tx[o] == ack_tx[o].read()) 
     {
-        if (out_ports.size() > 1) {
-            if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                LOG << " input " << i << " want outputs because of flit: " << flit << endl;
+        LOG_M << "forward ok " << i << "->" << o << ", flit: " << flit 
+              << " , if from backup:" << isFromBackup << endl;
 
-            // lock outputs
-            if (_waiting_list[i] == NOT_WAITING) // cannot lock when waiting done, it'll duplicate
-            {
-                for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                    if (GlobalParams::verbose_mode >= VERBOSE_LOW)
-                        LOG << " locking output " << *it << ", which is wanted " << _wanted_list[*it] + 1 << "times." << endl;
-                    _wanted_list[*it] ++;
-                }
-                
-                // Don't release any output here! May be taken by unicast! One only release himself!
-                // Key move! for multi_outports, give it high priority
-                _waiting_list[i] = WAITING;
+        flit_tx[o].write(flit);
+        if (o == DIRECTION_HUB) {
+            power.r2hLink();
+            LOG << "Forwarding to HUB " << flit << endl;
+        } else {
+            power.r2rLink();
+        }
 
-                if (GlobalParams::verbose_mode >= VERBOSE_LOW) {
-                    LOG << " not all good for flit: " << flit << endl;
-                    for(vector<int>::iterator it=out_ports.begin(); it!=out_ports.end(); ++it) {
-                        LOG << "   " << i << " -> " << *it 
-                            << " available: " << reservation_table.isAvailable(*it) << endl;
-                        LOG << "   output " << *it << " is reserved by input " 
-                            << reservation_table.getReservingInput(*it) << endl;
-                    }
-                }
+        power.crossBar();
 
+        current_level_tx[o] = 1 - current_level_tx[o];
+        req_tx[o].write(current_level_tx[o]);
+        if (!isFromBackup) {
+            buffer[i].Pop();
+            power.bufferRouterPop();
+        } else {
+            backup_unit[i].pop();
+            // TODO: better power model for backup
+            power.bufferRouterPop();
+        }
+        
+        // if flit has been consumed
+        if (flit.dst_id == local_id)
+            power.networkInterface();
+
+        if (flit.flit_type == FLIT_TYPE_TAIL) {
+            LOG_M << " release " << i << "->" << o << ", flit: " << flit << endl;
+            reservation_table.release(o);
+            // if forward from input and backup_unit is backing up. End backup!
+            if (backup_unit[i].isBackingUp()) {
+                assert(!isFromBackup);
+                backup_unit[i].endBackUp();
+                LOG_M << "end backup " << i << endl;
             }
+            // if forward from backup, and backup_unit is expecting no ports. Clear backup!
+            if (isFromBackup && backup_unit[i].getExpectPorts().size() == 0) {
+                backup_unit[i].clear();
+            }
+        }
+        // Update stats
+        if (o == DIRECTION_LOCAL) 
+        {
+            LOG_M << i << "->" << o << " consumed flit " << flit << endl;
 
-        } else { // unicast flit
-            _waiting_list[i] = NOT_WAITING;
+            stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
+            if (GlobalParams:: max_volume_to_be_drained) 
+            {
+                if (drained_volume >= GlobalParams:: max_volume_to_be_drained)
+                    sc_stop();
+                else 
+                {
+                    drained_volume++;
+                    local_drained++;
+                }
+            }
+        } 
+        else if (i != DIRECTION_LOCAL) 
+        {
+            // Increment routed flits counter
+            routed_flits++;
         }
     }
-
+    else
+    {
+        LOG_M << " cannot forward " << i << "->" << o << ", flit: " << flit
+              << " , if from backup:" << isFromBackup << endl;
+        if (flit.flit_type == FLIT_TYPE_HEAD) {
+            reservation_table.release(o);
+            LOG_M << " release " << i << "->" << o << ", flit: " << flit << endl;   
+            if (isFromBackup)
+                backup_unit[i].addExpectPort(o);
+        }
+    }
 }
 
 NoP_data Router::getCurrentNoPData()
@@ -403,8 +375,7 @@ vector < int > Router::routingFunction(const RouteData & route_data)
             return dirv;
         }
     }
-    if (GlobalParams::verbose_mode >= VERBOSE_MEDIUM) 
-        LOG << "Wired routing for dst = " << route_data.dst_id << endl;
+    LOG_M << "Wired routing for dst = " << route_data.dst_id << endl;
 
     return routingAlgorithm->route(this, route_data);
 }
@@ -425,9 +396,8 @@ vector<int> Router::route(const RouteData & route_data)
             out_ports.push_back(*it);
         }
     }
+    assert(out_ports.size() > 0);
     return out_ports;
-    /* abondon selection, all output ports are wanted */
-    // return selectionFunction(candidate_channels, route_data);
 }
 
 void Router::NoP_report() const
@@ -597,7 +567,6 @@ bool Router::isInjectCongested()
     else 
         return false;
 }
-
 
 void Router::ShowBuffersStats(std::ostream & out)
 {

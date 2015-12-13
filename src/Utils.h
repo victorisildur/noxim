@@ -11,6 +11,10 @@
 
 #define LOG (std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " " << name() << "::" << __func__<< "() --> ")
 
+#define LOG_L if(GlobalParams::verbose_mode >= VERBOSE_LOW) std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " " << name() << "::" << __func__<< "() --> "
+
+#define LOG_M if(GlobalParams::verbose_mode >= VERBOSE_MEDIUM) std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " " << name() << "::" << __func__<< "() --> "
+
 #define LOG_EZ (std::cout << std::setw(7) << left << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << " :" << __func__<< "() --> ")
 
 #else

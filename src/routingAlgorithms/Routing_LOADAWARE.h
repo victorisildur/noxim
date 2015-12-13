@@ -20,8 +20,12 @@ private:
     static Routing_LOADAWARE * routing_LOADAWARE;
     static RoutingAlgorithmsRegister routingAlgorithmsRegister;
 
-    int coord2Label(const Coord coord);
-    Coord label2Coord(const int label);
+    int coord2Hlabel(const Coord coord);
+    Coord hlabel2Coord(const int label);
+
+    int coord2Vlabel(const Coord coord);
+    Coord vlabel2Coord(const int label);
+
     int calcDir(const Coord next, const Coord curr);
 };
 

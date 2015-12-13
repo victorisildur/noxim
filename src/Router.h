@@ -14,6 +14,7 @@
 #include <systemc.h>
 #include "DataStructs.h"
 #include "Buffer.h"
+#include "BackupUnit.h"
 #include "Stats.h"
 #include "GlobalRoutingTable.h"
 #include "LocalRoutingTable.h"
@@ -58,20 +59,21 @@ SC_MODULE(Router)
     // Registers
 
     /*
-       Coord position;                      // Router position inside the mesh
-     */
-    int local_id;		                    // Unique ID
+      Coord position;                     // Router position inside the mesh
+    */
+    int local_id;		                // Unique ID
     int routing_type;		                // Type of routing algorithm
     int selection_type;
     Buffer buffer[DIRECTIONS + 2];	        // Buffer for each input channel 
-
+    BackupUnit backup_unit[DIRECTIONS + 2];	    // Backup for each input buffer
     int  _broadcast_routine;
+    int backup_control[DIRECTIONS + 2];	        // Backup control signal
     bool current_level_rx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
-    Stats stats;		                    // Statistics
+    Stats stats;		                // Statistics
     Power power;
-    LocalRoutingTable routing_table;	    // Routing table
-    ReservationTable reservation_table;	    // Switch reservation table
+    LocalRoutingTable routing_table;	// Routing table
+    ReservationTable reservation_table;	// Switch reservation table
     int start_from_port;	                // Port from which to start the reservation cycle
     unsigned long routed_flits;
     RoutingAlgorithm * routingAlgorithm; 
@@ -81,10 +83,19 @@ SC_MODULE(Router)
 
     void rxProcess();		// The receiving process
     void txProcess();		// The transmitting process
+
+    // reserve for input i, return expect ports if there are
+    void reserveForInput(int i); 
+    // backup input i
+    void backupInput(int i);
+    // forward buffer i or backup unit i
+    void forwardInput(int i);
+
+
     void perCycleUpdate();
     void configure(const int _id, const double _warm_up_time,
-		   const unsigned int _max_buffer_size,
-		   GlobalRoutingTable & grt);
+                   const unsigned int _max_buffer_size,
+                   GlobalRoutingTable & grt);
 
     unsigned long getRoutedFlits();	// Returns the number of routed flits 
     unsigned int getFlitsCount();	// Returns the number of flits into the router
@@ -92,43 +103,43 @@ SC_MODULE(Router)
     // Constructor
 
     SC_CTOR(Router) {
-	SC_METHOD(rxProcess);
-	sensitive << reset;
-	sensitive << clock.pos();
+        SC_METHOD(rxProcess);
+        sensitive << reset;
+        sensitive << clock.pos();
 
-	SC_METHOD(txProcess);
-	sensitive << reset;
-	sensitive << clock.pos();
+        SC_METHOD(txProcess);
+        sensitive << reset;
+        sensitive << clock.pos();
 
-	SC_METHOD(perCycleUpdate);
-	sensitive << reset;
-	sensitive << clock.pos();
+        SC_METHOD(perCycleUpdate);
+        sensitive << reset;
+        sensitive << clock.pos();
 	
-	routingAlgorithm = RoutingAlgorithms::get(GlobalParams::routing_algorithm);
+        routingAlgorithm = RoutingAlgorithms::get(GlobalParams::routing_algorithm);
 
-	if (routingAlgorithm == 0)
-	{
-	    cerr << " FATAL: invalid routing -routing " << GlobalParams::routing_algorithm << ", check with noxim -help" << endl;
-	    exit(-1);
-	}
+        if (routingAlgorithm == 0)
+        {
+            cerr << " FATAL: invalid routing -routing " << GlobalParams::routing_algorithm << ", check with noxim -help" << endl;
+            exit(-1);
+        }
 
-	selectionStrategy = SelectionStrategies::get(GlobalParams::selection_strategy);
+        selectionStrategy = SelectionStrategies::get(GlobalParams::selection_strategy);
 
-	if (selectionStrategy == 0)
-	{
-	    cerr << " FATAL: invalid selection strategy -sel " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
-	    exit(-1);
-	}
+        if (selectionStrategy == 0)
+        {
+            cerr << " FATAL: invalid selection strategy -sel " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
+            exit(-1);
+        }
     }
 
-  private:
+private:
 
     // performs actual routing + selection
     vector<int> route(const RouteData & route_data);
 
     // wrappers
     int selectionFunction(const vector <int> &directions,
-			  const RouteData & route_data);
+                          const RouteData & route_data);
     vector < int >routingFunction(const RouteData & route_data);
  
     NoP_data getCurrentNoPData();
@@ -136,10 +147,8 @@ SC_MODULE(Router)
     int NoPScore(const NoP_data & nop_data, const vector <int> & nop_channels) const;
     int reflexDirection(int direction) const;
     int getNeighborId(int _id, int direction) const;
-    // reserve rtable for input i
-    void reserveOutputsForInput(int i);
 
-  public:
+public:
     unsigned int local_drained;
 
     bool inCongestion();

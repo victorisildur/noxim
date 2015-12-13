@@ -29,7 +29,7 @@ void Buffer::Print(const char *prefix)
 {
     queue<Flit> m = buffer;
 
-    string bstr = "";
+    string bstr = " ";
 
     char  t[] = "HBT";
 
@@ -38,7 +38,7 @@ void Buffer::Print(const char *prefix)
     {
         Flit f = m.front();
         m.pop();
-        cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
+        cout << bstr << f << " | ";
     }
     cout << endl;
 }
